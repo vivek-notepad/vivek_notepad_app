@@ -111,7 +111,6 @@ class _NotesHomePageState extends State<NotesHomePage> {
   );
 }
 
-
   void _startEditingNote(String docId, String title, String content) {
     _titleController.text = title;
     _contentController.text = content;
