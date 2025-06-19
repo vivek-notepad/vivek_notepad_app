@@ -16,7 +16,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.example.notepad_app"
+    namespace = "com.viveksingh.notepad_app"
     compileSdk = 35
     ndkVersion = "27.0.12077973"
 
@@ -30,7 +30,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.notepad_app"
+        applicationId = "com.viveksingh.notepad_app"
         minSdk = 23
         targetSdk = 35
         versionCode = 1
