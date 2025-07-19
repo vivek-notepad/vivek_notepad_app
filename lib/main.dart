@@ -7,8 +7,6 @@ import 'package:intl/intl.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-
-  // Sign in anonymously
   await FirebaseAuth.instance.signInAnonymously();
 
   runApp(const NotepadApp());
@@ -43,7 +41,6 @@ class _NotesHomePageState extends State<NotesHomePage> {
   final String userId = FirebaseAuth.instance.currentUser!.uid;
 
   late final CollectionReference notesCollection;
-
   String? editingNoteId;
 
   @override
@@ -62,13 +59,11 @@ class _NotesHomePageState extends State<NotesHomePage> {
     if (title.isEmpty && content.isEmpty) return;
 
     if (editingNoteId != null) {
-      // Update note
       await notesCollection.doc(editingNoteId).update({
         'title': title,
         'content': content,
       });
     } else {
-      // Add new note
       await notesCollection.add({
         'title': title,
         'content': content,
@@ -82,34 +77,29 @@ class _NotesHomePageState extends State<NotesHomePage> {
     setState(() {});
   }
 
-  void _deleteNote(String docId) async {
-    await notesCollection.doc(docId).delete();
-    setState(() {});
-  }
-
   void _confirmDeleteNote(String docId) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Delete Note'),
-      content: const Text('Are you sure you want to delete this note?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context), // cancel
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () async {
-            await notesCollection.doc(docId).delete();
-            Navigator.pop(context); // close dialog
-            setState(() {});
-          },
-          child: const Text('Delete', style: TextStyle(color: Colors.red)),
-        ),
-      ],
-    ),
-  );
-}
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Note'),
+        content: const Text('Are you sure you want to delete this note?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              await notesCollection.doc(docId).delete();
+              Navigator.pop(context);
+              setState(() {});
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _startEditingNote(String docId, String title, String content) {
     _titleController.text = title;
@@ -127,36 +117,37 @@ class _NotesHomePageState extends State<NotesHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(title: const Text('Notepad')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: 'Title',
-                border: OutlineInputBorder(),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              TextField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                  border: OutlineInputBorder(),
+                ),
               ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _contentController,
-              minLines: 3,
-              maxLines: null,
-              decoration: const InputDecoration(
-                labelText: 'Content',
-                border: OutlineInputBorder(),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _contentController,
+                minLines: 3,
+                maxLines: null,
+                decoration: const InputDecoration(
+                  labelText: 'Content',
+                  border: OutlineInputBorder(),
+                ),
               ),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: _addOrUpdateNote,
-              child: Text(editingNoteId == null ? 'Add Note' : 'Update Note'),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: _addOrUpdateNote,
+                child: Text(editingNoteId == null ? 'Add Note' : 'Update Note'),
+              ),
+              const SizedBox(height: 20),
+              StreamBuilder<QuerySnapshot>(
                 stream: notesCollection.orderBy('createdAt', descending: true).snapshots(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
@@ -170,6 +161,8 @@ class _NotesHomePageState extends State<NotesHomePage> {
                   }
 
                   return ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
                     itemCount: notes.length,
                     itemBuilder: (context, index) {
                       final doc = notes[index];
@@ -188,9 +181,18 @@ class _NotesHomePageState extends State<NotesHomePage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const SizedBox(height: 4),
-                              Text(content),
+                              Container(
+                                constraints: const BoxConstraints(maxHeight: 100),
+                                child: SingleChildScrollView(
+                                  child: Text(
+                                    content,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                              ),
                               const SizedBox(height: 6),
-                              Text(createdAt, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                              Text(createdAt,
+                                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
                             ],
                           ),
                           trailing: IconButton(
@@ -204,8 +206,8 @@ class _NotesHomePageState extends State<NotesHomePage> {
                   );
                 },
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
