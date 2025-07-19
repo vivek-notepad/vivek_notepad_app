@@ -91,6 +91,12 @@ class _NotesHomePageState extends State<NotesHomePage> {
           TextButton(
             onPressed: () async {
               await notesCollection.doc(docId).delete();
+
+               if (editingNoteId == docId) {
+              _titleController.clear();
+              _contentController.clear();
+              editingNoteId = null;
+            }
               Navigator.pop(context);
               setState(() {});
             },
