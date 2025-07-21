@@ -8,7 +8,6 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await FirebaseAuth.instance.signInAnonymously();
-
   runApp(const NotepadApp());
 }
 
@@ -58,7 +57,14 @@ class _NotesHomePageState extends State<NotesHomePage> {
 
     if (title.isEmpty && content.isEmpty) return;
 
-    if (editingNoteId != null) {
+    // Clear controllers and reset editing state BEFORE Firestore operation
+    final wasEditing = editingNoteId != null;
+    _titleController.clear();
+    _contentController.clear();
+    editingNoteId = null;
+    setState(() {}); // Update UI immediately to clear fields and reset button
+
+    if (wasEditing) {
       await notesCollection.doc(editingNoteId).update({
         'title': title,
         'content': content,
@@ -67,14 +73,16 @@ class _NotesHomePageState extends State<NotesHomePage> {
       await notesCollection.add({
         'title': title,
         'content': content,
+        'isCompleted': false,
         'createdAt': FieldValue.serverTimestamp(),
       });
     }
+  }
 
-    _titleController.clear();
-    _contentController.clear();
-    editingNoteId = null;
-    setState(() {});
+  Future<void> _toggleCompletionStatus(String docId, bool currentStatus) async {
+    await notesCollection.doc(docId).update({
+      'isCompleted': !currentStatus,
+    });
   }
 
   void _confirmDeleteNote(String docId) {
@@ -90,15 +98,23 @@ class _NotesHomePageState extends State<NotesHomePage> {
           ),
           TextButton(
             onPressed: () async {
-              await notesCollection.doc(docId).delete();
-
-               if (editingNoteId == docId) {
-              _titleController.clear();
-              _contentController.clear();
-              editingNoteId = null;
-            }
+              // Close dialog immediately
               Navigator.pop(context);
-              setState(() {});
+              
+              // Check if we're deleting the note currently being edited
+              final wasEditing = editingNoteId == docId;
+              
+              // Delete the note
+              await notesCollection.doc(docId).delete();
+              
+              // If it was being edited, reset editing state
+              if (wasEditing) {
+                _titleController.clear();
+                _contentController.clear();
+                editingNoteId = null;
+                // Force UI update to change button and clear fields
+                setState(() {});
+              }
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
@@ -111,6 +127,13 @@ class _NotesHomePageState extends State<NotesHomePage> {
     _titleController.text = title;
     _contentController.text = content;
     editingNoteId = docId;
+    setState(() {});
+  }
+
+  void _cancelEditing() {
+    _titleController.clear();
+    _contentController.clear();
+    editingNoteId = null;
     setState(() {});
   }
 
@@ -148,9 +171,21 @@ class _NotesHomePageState extends State<NotesHomePage> {
                 ),
               ),
               const SizedBox(height: 10),
-              ElevatedButton(
-                onPressed: _addOrUpdateNote,
-                child: Text(editingNoteId == null ? 'Add Note' : 'Update Note'),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: _addOrUpdateNote,
+                    child: Text(editingNoteId == null ? 'Add Note' : 'Update Note'),
+                  ),
+                  if (editingNoteId != null) ...[
+                    const SizedBox(width: 10),
+                    TextButton(
+                      onPressed: _cancelEditing,
+                      child: const Text('Cancel'),
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: 20),
               StreamBuilder<QuerySnapshot>(
@@ -175,6 +210,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
                       final data = doc.data() as Map<String, dynamic>;
                       final title = data['title'] ?? '';
                       final content = data['content'] ?? '';
+                      final isCompleted = data['isCompleted'] ?? false;
                       final createdAt = _formatTimestamp(data['createdAt']);
 
                       return Card(
@@ -182,7 +218,20 @@ class _NotesHomePageState extends State<NotesHomePage> {
                         elevation: 2,
                         child: ListTile(
                           onTap: () => _startEditingNote(doc.id, title, content),
-                          title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          leading: Checkbox(
+                            value: isCompleted,
+                            onChanged: (value) => 
+                                _toggleCompletionStatus(doc.id, isCompleted),
+                          ),
+                          title: Text(
+                            title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              decoration: isCompleted 
+                                  ? TextDecoration.lineThrough 
+                                  : TextDecoration.none,
+                            ),
+                          ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -192,13 +241,23 @@ class _NotesHomePageState extends State<NotesHomePage> {
                                 child: SingleChildScrollView(
                                   child: Text(
                                     content,
-                                    style: const TextStyle(fontSize: 14),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      decoration: isCompleted 
+                                          ? TextDecoration.lineThrough 
+                                          : TextDecoration.none,
+                                    ),
                                   ),
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              Text(createdAt,
-                                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                              Text(
+                                createdAt,
+                                style: const TextStyle(
+                                  fontSize: 12, 
+                                  color: Colors.grey
+                                ),
+                              ),
                             ],
                           ),
                           trailing: IconButton(
