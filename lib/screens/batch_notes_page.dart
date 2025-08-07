@@ -131,7 +131,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
     final title = _titleController.text.trim();
     final wasEditing = editingNoteId != null;
 
-    if (title.isEmpty) return;
+    if (title.isEmpty && _tasks.isEmpty) return;
 
     try {
       // Convert tasks to Firestore-compatible format
