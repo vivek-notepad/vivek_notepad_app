@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'batch_notes_page.dart';
 
 class NotesHomePage extends StatefulWidget {
   const NotesHomePage({super.key});
@@ -16,6 +17,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
   final String userId = FirebaseAuth.instance.currentUser!.uid;
   late final CollectionReference notesCollection;
   String? editingNoteId;
+  bool _isBatchMode = false;
 
   @override
   void initState() {
@@ -27,40 +29,38 @@ class _NotesHomePageState extends State<NotesHomePage> {
   }
 
   void _addOrUpdateNote() async {
-  final title = _titleController.text.trim();
-  final content = _contentController.text.trim();
+    final title = _titleController.text.trim();
+    final content = _contentController.text.trim();
 
-  if (title.isEmpty && content.isEmpty) return;
+    if (title.isEmpty && content.isEmpty) return;
 
-  final wasEditing = editingNoteId != null;
+    final wasEditing = editingNoteId != null;
 
-  if (wasEditing) {
-    await notesCollection.doc(editingNoteId).update({
-      'title': title,
-      'content': content,
-    });
-  } else {
-    await notesCollection.add({
-      'title': title,
-      'content': content,
-      'isLocked': false,
-      'isCompleted': false,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    if (wasEditing) {
+      await notesCollection.doc(editingNoteId).update({
+        'title': title,
+        'content': content,
+      });
+    } else {
+      await notesCollection.add({
+        'title': title,
+        'content': content,
+        'isLocked': false,
+        'isCompleted': false,
+        'isBatch': false,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(wasEditing ? 'Note updated' : 'Note added')),
+    );
+
+    _titleController.clear();
+    _contentController.clear();
+    editingNoteId = null;
+    setState(() {});
   }
-
-  // ✅ Show feedback
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(wasEditing ? 'Note updated' : 'Note added')),
-  );
-
-  // ✅ Clear state
-  _titleController.clear();
-  _contentController.clear();
-  editingNoteId = null;
-  setState(() {});
-}
-
 
   void _confirmDeleteNote(String docId) {
     showDialog(
@@ -111,13 +111,49 @@ class _NotesHomePageState extends State<NotesHomePage> {
     return DateFormat.yMMMd().add_jm().format(date);
   }
 
+  void _navigateToBatchNotes() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BatchNotesPage(resetBatchMode: resetBatchMode),
+      ),
+    );
+  }
+
+  void resetBatchMode() {
+    // Schedule the state update for the next frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {
+          _isBatchMode = false;
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: const Text('Secure Notepad'),
+        title: const Text('Secure Notepad', style: TextStyle(color: Colors.indigo)),
         actions: [
+          Row(
+            children: [
+              const Text('Batch Mode'),
+              Switch(
+                value: _isBatchMode,
+                onChanged: (value) {
+                  setState(() {
+                    _isBatchMode = value;
+                    if (_isBatchMode) {
+                      _navigateToBatchNotes();
+                    }
+                  });
+                },
+              ),
+            ],
+          ),
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'locked-notes') {
@@ -167,6 +203,10 @@ class _NotesHomePageState extends State<NotesHomePage> {
                 children: [
                   ElevatedButton(
                     onPressed: _addOrUpdateNote,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.indigo,
+                      foregroundColor: Colors.white,
+                    ),
                     child: Text(editingNoteId == null ? 'Add Note' : 'Update Note'),
                   ),
                   if (editingNoteId != null) ...[
@@ -182,6 +222,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
               StreamBuilder<QuerySnapshot>(
                 stream: notesCollection
                     .where('isLocked', isEqualTo: false)
+                    .where('isBatch', isEqualTo: false)
                     .orderBy('createdAt', descending: true)
                     .snapshots(),
                 builder: (context, snapshot) {
@@ -253,7 +294,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
                             ],
                           ),
                           trailing: IconButton(
-                            icon: const Icon(Icons.delete),
+                            icon: const Icon(Icons.delete, color: Colors.red),
                             onPressed: () => _confirmDeleteNote(doc.id),
                           ),
                           isThreeLine: true,

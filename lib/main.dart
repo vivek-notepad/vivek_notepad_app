@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'screens/notes_home_page.dart';
 import 'screens/locked_notes_page.dart';
 import 'screens/security_setup_page.dart';
+import 'screens/batch_notes_page.dart'; // Ensure this import is present
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +27,7 @@ class NotepadApp extends StatelessWidget {
       home: const NotesHomePage(),
       routes: {
         '/locked-notes': (context) => const LockedNotesPage(),
-        '/security-setup': (context) => const SecuritySetupPage(),
+        '/security-setup': (context) => const SecuritySetupPage()
       },
     );
   }

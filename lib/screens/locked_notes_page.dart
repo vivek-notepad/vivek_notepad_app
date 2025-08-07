@@ -379,7 +379,7 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: const Text('Locked Notes'),
+        title: const Text('Locked Notes', style: TextStyle(color: Colors.indigo)),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -409,6 +409,10 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
                 children: [
                   ElevatedButton(
                     onPressed: _addOrUpdateNote,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.indigo,
+                      foregroundColor: Colors.white,
+                    ),
                     child: Text(editingNoteId == null ? 'Add Note' : 'Update Note'),
                   ),
                   if (editingNoteId != null) ...[
@@ -495,7 +499,7 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
                             ],
                           ),
                           trailing: IconButton(
-                            icon: const Icon(Icons.delete),
+                            icon: const Icon(Icons.delete, color: Colors.red),
                             onPressed: () => _confirmDeleteNote(doc.id),
                           ),
                           isThreeLine: true,
