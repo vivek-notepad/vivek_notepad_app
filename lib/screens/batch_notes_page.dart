@@ -131,7 +131,16 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
     final title = _titleController.text.trim();
     final wasEditing = editingNoteId != null;
 
-    if (title.isEmpty && _tasks.isEmpty) return;
+    // Allow saving with either title or tasks
+    if (title.isEmpty && _tasks.isEmpty) {
+      // If we're editing and both fields are empty, delete the note
+      if (wasEditing) {
+        await _deleteNote(editingNoteId!);
+        return;
+      }else{
+        return;
+      }
+    }
 
     try {
       // Convert tasks to Firestore-compatible format
@@ -180,6 +189,26 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteNote(String docId) async {
+    try {
+      await notesCollection.doc(docId).delete();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Note deleted'),
+          backgroundColor: Colors.black,
+        ),
+      );
+      _cancelEditing();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting note: ${e.toString()}'),
           backgroundColor: Colors.red,
         ),
       );
@@ -253,10 +282,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              await notesCollection.doc(docId).delete();
-              if (editingNoteId == docId) {
-                _cancelEditing();
-              }
+              await _deleteNote(docId);
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
@@ -302,17 +328,38 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                         Expanded(
                           child: TextField(
                             controller: _taskController,
-                            decoration: const InputDecoration(
-                              labelText: 'Add a task',
+                            decoration: InputDecoration(
+                              labelText: _editingTaskIndex != null 
+                                  ? 'Edit task' 
+                                  : 'Add a task',
                               border: InputBorder.none,
                               contentPadding: EdgeInsets.symmetric(horizontal: 8),
                             ),
-                            onSubmitted: (_) => _addTask(),
+                            onSubmitted: (_) {
+                              if (_editingTaskIndex != null) {
+                                _updateTask(_editingTaskIndex!);
+                              } else {
+                                _addTask();
+                              }
+                            },
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.add),
-                          onPressed: _addTask,
+                          icon: Icon(
+                            _editingTaskIndex != null 
+                                ? Icons.check
+                                : Icons.add,
+                            color: _editingTaskIndex != null 
+                                ? Colors.green
+                                : Colors.indigo,
+                          ),
+                          onPressed: () {
+                            if (_editingTaskIndex != null) {
+                              _updateTask(_editingTaskIndex!);
+                            } else {
+                              _addTask();
+                            }
+                          },
                         ),
                       ],
                     ),
@@ -394,11 +441,11 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                                       ]
                                       else ...[
                                         IconButton(
-                                          icon: const Icon(Icons.save, size: 20),
+                                          icon: const Icon(Icons.check, size: 20, color: Colors.green),
                                           onPressed: () => _updateTask(index),
                                         ),
                                         IconButton(
-                                          icon: const Icon(Icons.cancel, size: 20),
+                                          icon: const Icon(Icons.close, size: 20, color: Colors.red),
                                           onPressed: () {
                                             setState(() {
                                               _taskController.clear();

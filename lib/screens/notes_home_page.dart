@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'batch_notes_page.dart';
 
 class NotesHomePage extends StatefulWidget {
@@ -121,13 +123,32 @@ class _NotesHomePageState extends State<NotesHomePage> {
   }
 
   void resetBatchMode() {
-    // Schedule the state update for the next frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         setState(() {
           _isBatchMode = false;
         });
       }
+    });
+  }
+
+  void _inviteFriends() {
+    Share.share(
+      'Check out this awesome Secure Notepad app! It helps me stay organized and secure my notes.\n\nDownload it here: [Your App Store Link]',
+      subject: 'Try Secure Notepad App',
+    );
+  }
+
+  void _sendFeedback() {
+    final Uri emailLaunchUri = Uri(
+      scheme: 'mailto',
+      path: 'vvmh2014@gmail.com',
+    );
+
+    launchUrl(emailLaunchUri).catchError((error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not launch email client')),
+      );
     });
   }
 
@@ -158,6 +179,10 @@ class _NotesHomePageState extends State<NotesHomePage> {
             onSelected: (value) {
               if (value == 'locked-notes') {
                 Navigator.pushNamed(context, '/locked-notes');
+              } else if (value == 'invite') {
+                _inviteFriends();
+              } else if (value == 'feedback') {
+                _sendFeedback();
               }
             },
             itemBuilder: (BuildContext context) => [
@@ -168,6 +193,26 @@ class _NotesHomePageState extends State<NotesHomePage> {
                     Icon(Icons.lock),
                     SizedBox(width: 8),
                     Text('Locked Notes'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'invite',
+                child: Row(
+                  children: [
+                    Icon(Icons.share),
+                    SizedBox(width: 8),
+                    Text('Invite friends to the app'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'feedback',
+                child: Row(
+                  children: [
+                    Icon(Icons.feedback),
+                    SizedBox(width: 8),
+                    Text('Send feedback'),
                   ],
                 ),
               ),
