@@ -134,7 +134,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
 
   void _inviteFriends() {
     Share.share(
-      'Check out this awesome Secure Notepad app! It helps me stay organized and secure my notes.\n\nDownload it here: [Your App Store Link]',
+      'Check out this awesome Secure Notepad app! It helps me stay organized and secure my notes.\n\nDownload it here: [https://play.google.com/store/apps/details?id=com.viveksingh.notepad_app&pli=1]',
       subject: 'Try Secure Notepad App',
     );
   }
@@ -142,7 +142,11 @@ class _NotesHomePageState extends State<NotesHomePage> {
   void _sendFeedback() {
     final Uri emailLaunchUri = Uri(
       scheme: 'mailto',
-      path: 'vvmh2014@gmail.com',
+      path: 'support@yourcompany.com', // Replace with your support email
+      queryParameters: {
+        'subject': 'Feedback for Secure Notepad App',
+        'body': 'Hello Secure Notepad Team,\n\nI would like to share the following feedback:\n\n',
+      },
     );
 
     launchUrl(emailLaunchUri).catchError((error) {
