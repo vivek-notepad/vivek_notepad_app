@@ -142,12 +142,8 @@ class _NotesHomePageState extends State<NotesHomePage> {
   void _sendFeedback() {
     final Uri emailLaunchUri = Uri(
       scheme: 'mailto',
-      path: 'support@yourcompany.com', // Replace with your support email
-      queryParameters: {
-        'subject': 'Feedback for Secure Notepad App',
-        'body': 'Hello Secure Notepad Team,\n\nI would like to share the following feedback:\n\n',
-      },
-    );
+      path: 'vvmh2014@gmail.com',
+      );
 
     launchUrl(emailLaunchUri).catchError((error) {
       ScaffoldMessenger.of(context).showSnackBar(
