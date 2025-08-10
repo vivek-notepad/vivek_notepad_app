@@ -5,6 +5,7 @@
 
     <application
         android:label="Simple Notepad"
+        android:usesCleartextTraffic="true"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         
