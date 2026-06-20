@@ -929,6 +929,12 @@ abstract class AppLocalizations {
   /// **'Voice input is not available on this device.'**
   String get voiceInputNotAvailable;
 
+  /// No description provided for @voiceDailyLimitReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily voice input limit of {limit} words reached. Try again tomorrow.'**
+  String voiceDailyLimitReached(int limit);
+
   /// No description provided for @dailyAt.
   ///
   /// In en, this message translates to:

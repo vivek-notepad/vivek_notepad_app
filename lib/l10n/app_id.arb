@@ -137,6 +137,7 @@
   "micPermissionRequired": "Izin mikrofon diperlukan untuk input suara.",
   "micPermissionDeniedSettings": "Izin mikrofon ditolak. Aktifkan di pengaturan aplikasi.",
   "voiceInputNotAvailable": "Input suara tidak tersedia di perangkat ini.",
+  "voiceDailyLimitReached": "Batas input suara harian {limit} kata tercapai. Coba lagi besok.",
   "dailyAt": "Harian pukul {time}",
   "weeklyOn": "Mingguan setiap {day} pukul {time}",
   "monthlyOnDay": "Bulanan tanggal {day} pukul {time}",

@@ -454,6 +454,11 @@ class AppLocalizationsHi extends AppLocalizations {
       'इस डिवाइस पर वॉइस इनपुट उपलब्ध नहीं है।';
 
   @override
+  String voiceDailyLimitReached(int limit) {
+    return 'दैनिक वॉइस इनपुट की $limit शब्दों की सीमा पूरी हो गई। कल फिर कोशिश करें।';
+  }
+
+  @override
   String dailyAt(String time) {
     return 'प्रतिदिन $time बजे';
   }

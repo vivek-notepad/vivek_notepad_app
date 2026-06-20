@@ -462,6 +462,11 @@ class AppLocalizationsFr extends AppLocalizations {
       'La saisie vocale n\'est pas disponible sur cet appareil.';
 
   @override
+  String voiceDailyLimitReached(int limit) {
+    return 'Limite quotidienne de $limit mots en saisie vocale atteinte. Réessayez demain.';
+  }
+
+  @override
   String dailyAt(String time) {
     return 'Quotidien à $time';
   }

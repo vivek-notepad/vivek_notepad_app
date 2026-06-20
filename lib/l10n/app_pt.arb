@@ -137,6 +137,7 @@
   "micPermissionRequired": "A permissão do microfone é necessária para entrada de voz.",
   "micPermissionDeniedSettings": "Permissão do microfone negada. Ative nas configurações do app.",
   "voiceInputNotAvailable": "Entrada de voz não disponível neste dispositivo.",
+  "voiceDailyLimitReached": "Limite diário de {limit} palavras por voz atingido. Tente novamente amanhã.",
   "dailyAt": "Diariamente às {time}",
   "weeklyOn": "Semanalmente às {day} às {time}",
   "monthlyOnDay": "Mensalmente no dia {day} às {time}",

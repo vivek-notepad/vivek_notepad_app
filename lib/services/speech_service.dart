@@ -3,14 +3,17 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'voice_usage_service.dart';
 
 typedef SpeechListeningCallback = void Function(bool isListening);
+typedef SpeechLimitCallback = void Function();
 
 enum SpeechFailureReason {
   none,
   permissionDenied,
   permissionPermanentlyDenied,
   notAvailable,
+  dailyLimitReached,
 }
 
 class SpeechService {
@@ -23,6 +26,7 @@ class SpeechService {
   SpeechListeningCallback? _listeningCallback;
   String _textPrefix = '';
   SpeechFailureReason _lastFailure = SpeechFailureReason.none;
+  SpeechLimitCallback? _limitCallback;
 
   bool get isAvailable => _initialized;
   SpeechFailureReason get lastFailure => _lastFailure;
@@ -63,6 +67,7 @@ class SpeechService {
   Future<bool> toggleListening(
     TextEditingController controller, {
     SpeechListeningCallback? onListeningChanged,
+    SpeechLimitCallback? onDailyLimitReached,
   }) async {
     if (isListeningTo(controller)) {
       await stopAny();
@@ -73,10 +78,16 @@ class SpeechService {
       return false;
     }
 
+    if (!await VoiceUsageService.instance.canStartVoiceInput()) {
+      _lastFailure = SpeechFailureReason.dailyLimitReached;
+      return false;
+    }
+
     await stopAny();
 
     _activeController = controller;
     _listeningCallback = onListeningChanged;
+    _limitCallback = onDailyLimitReached;
     _textPrefix = _prefixFor(controller.text);
 
     try {
@@ -110,6 +121,7 @@ class SpeechService {
     }
     _activeController = null;
     _listeningCallback = null;
+    _limitCallback = null;
     _textPrefix = '';
     _notifyListening(false);
   }
@@ -122,6 +134,8 @@ class SpeechService {
         return 'Microphone permission denied. Enable it in app settings.';
       case SpeechFailureReason.notAvailable:
         return 'Voice input is not available on this device.';
+      case SpeechFailureReason.dailyLimitReached:
+        return 'Daily voice input limit reached.';
       case SpeechFailureReason.none:
         return '';
     }
@@ -148,18 +162,61 @@ class SpeechService {
     final controller = _activeController;
     if (controller == null) return;
 
-    final words = result.recognizedWords.trim();
+    var words = result.recognizedWords.trim();
     if (words.isEmpty) return;
+
+    if (result.finalResult) {
+      _applyFinalResult(controller, words);
+      return;
+    }
 
     final combined = '$_textPrefix$words'.trimLeft();
     controller.value = TextEditingValue(
       text: combined,
       selection: TextSelection.collapsed(offset: combined.length),
     );
+  }
 
-    if (result.finalResult) {
-      _textPrefix = _prefixFor(combined);
+  Future<void> _applyFinalResult(
+    TextEditingController controller,
+    String words,
+  ) async {
+    final remaining = await VoiceUsageService.instance.getRemainingWords();
+    if (remaining <= 0) {
+      await _stopForDailyLimit();
+      return;
     }
+
+    final utteranceCount = VoiceUsageService.countWords(words);
+    if (utteranceCount > remaining) {
+      words = VoiceUsageService.truncateToWordCount(words, remaining);
+    }
+
+    final recorded = VoiceUsageService.countWords(words);
+    if (recorded <= 0) {
+      await _stopForDailyLimit();
+      return;
+    }
+
+    await VoiceUsageService.instance.recordWords(recorded);
+
+    final combined = '$_textPrefix$words'.trimLeft();
+    controller.value = TextEditingValue(
+      text: combined,
+      selection: TextSelection.collapsed(offset: combined.length),
+    );
+    _textPrefix = _prefixFor(combined);
+
+    if (await VoiceUsageService.instance.getRemainingWords() <= 0) {
+      await _stopForDailyLimit();
+    }
+  }
+
+  Future<void> _stopForDailyLimit() async {
+    _lastFailure = SpeechFailureReason.dailyLimitReached;
+    final callback = _limitCallback;
+    await stopAny();
+    callback?.call();
   }
 
   void _onError(SpeechRecognitionError error) {

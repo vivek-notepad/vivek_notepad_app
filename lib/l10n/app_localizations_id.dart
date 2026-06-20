@@ -462,6 +462,11 @@ class AppLocalizationsId extends AppLocalizations {
       'Input suara tidak tersedia di perangkat ini.';
 
   @override
+  String voiceDailyLimitReached(int limit) {
+    return 'Batas input suara harian $limit kata tercapai. Coba lagi besok.';
+  }
+
+  @override
   String dailyAt(String time) {
     return 'Harian pukul $time';
   }

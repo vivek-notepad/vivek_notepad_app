@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:simple_notepad/l10n/app_localizations.dart';
 import '../services/speech_service.dart';
+import '../services/voice_usage_service.dart';
 
 class VoiceInputButton extends StatefulWidget {
   final TextEditingController controller;
@@ -34,6 +35,16 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
           setState(() => _listening = listening);
         }
       },
+      onDailyLimitReached: () {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              l10n.voiceDailyLimitReached(VoiceUsageService.dailyWordLimit),
+            ),
+          ),
+        );
+      },
     );
 
     if (!mounted) return;
@@ -46,6 +57,8 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
           SpeechFailureReason.permissionPermanentlyDenied =>
             l10n.micPermissionDeniedSettings,
           SpeechFailureReason.notAvailable => l10n.voiceInputNotAvailable,
+          SpeechFailureReason.dailyLimitReached =>
+            l10n.voiceDailyLimitReached(VoiceUsageService.dailyWordLimit),
           SpeechFailureReason.none => '',
         };
         if (message.isNotEmpty) {

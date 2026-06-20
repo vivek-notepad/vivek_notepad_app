@@ -187,6 +187,12 @@
   "micPermissionRequired": "Microphone permission is required for voice input.",
   "micPermissionDeniedSettings": "Microphone permission denied. Enable it in app settings.",
   "voiceInputNotAvailable": "Voice input is not available on this device.",
+  "voiceDailyLimitReached": "Daily voice input limit of {limit} words reached. Try again tomorrow.",
+  "@voiceDailyLimitReached": {
+    "placeholders": {
+      "limit": { "type": "int" }
+    }
+  },
   "dailyAt": "Daily at {time}",
   "@dailyAt": {
     "placeholders": {

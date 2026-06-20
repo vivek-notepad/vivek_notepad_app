@@ -137,6 +137,7 @@
   "micPermissionRequired": "वॉइस इनपुट के लिए माइक्रोफ़ोन की अनुमति आवश्यक है।",
   "micPermissionDeniedSettings": "माइक्रोफ़ोन की अनुमति अस्वीकार। ऐप सेटिंग्स में इसे सक्षम करें।",
   "voiceInputNotAvailable": "इस डिवाइस पर वॉइस इनपुट उपलब्ध नहीं है।",
+  "voiceDailyLimitReached": "दैनिक वॉइस इनपुट की {limit} शब्दों की सीमा पूरी हो गई। कल फिर कोशिश करें।",
   "dailyAt": "प्रतिदिन {time} बजे",
   "weeklyOn": "हर {day} को {time} बजे",
   "monthlyOnDay": "हर महीने {day} तारीख को {time} बजे",

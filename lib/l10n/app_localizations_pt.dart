@@ -460,6 +460,11 @@ class AppLocalizationsPt extends AppLocalizations {
       'Entrada de voz não disponível neste dispositivo.';
 
   @override
+  String voiceDailyLimitReached(int limit) {
+    return 'Limite diário de $limit palavras por voz atingido. Tente novamente amanhã.';
+  }
+
+  @override
   String dailyAt(String time) {
     return 'Diariamente às $time';
   }
@@ -934,6 +939,11 @@ class AppLocalizationsPtBr extends AppLocalizationsPt {
   @override
   String get voiceInputNotAvailable =>
       'Entrada de voz não disponível neste dispositivo.';
+
+  @override
+  String voiceDailyLimitReached(int limit) {
+    return 'Limite diário de $limit palavras por voz atingido. Tente novamente amanhã.';
+  }
 
   @override
   String dailyAt(String time) {

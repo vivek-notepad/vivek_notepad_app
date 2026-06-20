@@ -456,6 +456,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Voice input is not available on this device.';
 
   @override
+  String voiceDailyLimitReached(int limit) {
+    return 'Daily voice input limit of $limit words reached. Try again tomorrow.';
+  }
+
+  @override
   String dailyAt(String time) {
     return 'Daily at $time';
   }
