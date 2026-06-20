@@ -6,10 +6,12 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'batch_notes_page.dart';
 import '../services/reminder_service.dart';
+import '../services/speech_service.dart';
 import '../services/widget_service.dart';
 import '../utils/note_search_utils.dart';
 import '../widgets/note_reminder_button.dart';
 import '../widgets/note_search_bar.dart';
+import '../widgets/voice_input_button.dart';
 
 class NotesHomePage extends StatefulWidget {
   const NotesHomePage({super.key});
@@ -98,6 +100,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
       );
     }
 
+    await SpeechService.instance.stopAny();
     _titleController.clear();
     _contentController.clear();
     editingNoteId = null;
@@ -141,7 +144,8 @@ class _NotesHomePageState extends State<NotesHomePage> {
     setState(() {});
   }
 
-  void _cancelEditing() {
+  void _cancelEditing() async {
+    await SpeechService.instance.stopAny();
     _titleController.clear();
     _contentController.clear();
     editingNoteId = null;
@@ -383,9 +387,10 @@ class _NotesHomePageState extends State<NotesHomePage> {
                 ),
               TextField(
                 controller: _titleController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Title',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
+                  suffixIcon: VoiceInputButton(controller: _titleController),
                 ),
               ),
               const SizedBox(height: 10),
@@ -393,10 +398,11 @@ class _NotesHomePageState extends State<NotesHomePage> {
                 controller: _contentController,
                 minLines: 3,
                 maxLines: null,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Content',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                   alignLabelWithHint: true,
+                  suffixIcon: VoiceInputButton(controller: _contentController),
                 ),
               ),
               const SizedBox(height: 10),

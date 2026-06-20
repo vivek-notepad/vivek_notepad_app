@@ -3,9 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../services/reminder_service.dart';
+import '../services/speech_service.dart';
 import '../services/widget_service.dart';
 import '../utils/reminder_dialog.dart';
 import '../widgets/note_reminder_button.dart';
+import '../widgets/voice_input_button.dart';
 
 class BatchNotesPage extends StatefulWidget {
   final VoidCallback resetBatchMode;
@@ -41,7 +43,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
     super.dispose();
   }
 
-  void _addTask() {
+  Future<void> _addTask() async {
     if (_taskController.text.trim().isNotEmpty) {
       setState(() {
         _tasks.insert(0, {
@@ -54,6 +56,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
         _taskTimes[0] = null;
         _taskTimePickers[0] = false;
       });
+      await SpeechService.instance.stopAny();
       _taskController.clear();
     }
   }
@@ -332,14 +335,15 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
     });
   }
 
-  void _updateTask(int index) {
+  Future<void> _updateTask(int index) async {
     final newText = _taskController.text.trim();
     if (newText.isNotEmpty) {
       setState(() {
         _tasks[index]['text'] = newText;
-        _taskController.clear();
         _editingTaskIndex = null;
       });
+      await SpeechService.instance.stopAny();
+      _taskController.clear();
     }
   }
 
@@ -405,6 +409,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
         ),
       );
 
+      await SpeechService.instance.stopAny();
       _titleController.clear();
       setState(() {
         _tasks.clear();
@@ -476,8 +481,9 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
     });
   }
 
-  void _cancelEditing() {
+  Future<void> _cancelEditing() async {
     FocusScope.of(context).unfocus();
+    await SpeechService.instance.stopAny();
     _titleController.clear();
     _taskController.clear();
     setState(() {
@@ -540,9 +546,10 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
               // Title field
               TextField(
                 controller: _titleController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Title',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
+                  suffixIcon: VoiceInputButton(controller: _titleController),
                 ),
               ),
               const SizedBox(height: 10),
@@ -569,6 +576,8 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                               border: InputBorder.none,
                               contentPadding:
                                   const EdgeInsets.symmetric(horizontal: 8),
+                              suffixIcon:
+                                  VoiceInputButton(controller: _taskController),
                             ),
                             onSubmitted: (_) {
                               if (_editingTaskIndex != null) {

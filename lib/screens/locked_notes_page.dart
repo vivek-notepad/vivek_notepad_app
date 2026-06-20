@@ -4,9 +4,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../services/secure_storage_service.dart';
 import '../services/reminder_service.dart';
+import '../services/speech_service.dart';
 import '../utils/note_search_utils.dart';
 import '../widgets/note_reminder_button.dart';
 import '../widgets/note_search_bar.dart';
+import '../widgets/voice_input_button.dart';
 
 class LockedNotesPage extends StatefulWidget {
   const LockedNotesPage({super.key});
@@ -315,7 +317,7 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
     SnackBar(content: Text(wasEditing ? 'Note updated' : 'Note added')),
   );
 
-  // Now clear the fields and reset the editing state
+  await SpeechService.instance.stopAny();
   _titleController.clear();
   _contentController.clear();
   editingNoteId = null;
@@ -361,7 +363,8 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
     setState(() {});
   }
 
-  void _cancelEditing() {
+  void _cancelEditing() async {
+    await SpeechService.instance.stopAny();
     _titleController.clear();
     _contentController.clear();
     editingNoteId = null;
@@ -402,9 +405,10 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
             children: [
               TextField(
                 controller: _titleController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Title',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
+                  suffixIcon: VoiceInputButton(controller: _titleController),
                 ),
               ),
               const SizedBox(height: 10),
@@ -412,10 +416,11 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
                 controller: _contentController,
                 minLines: 3,
                 maxLines: null,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Content',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                   alignLabelWithHint: true,
+                  suffixIcon: VoiceInputButton(controller: _contentController),
                 ),
               ),
               const SizedBox(height: 10),
