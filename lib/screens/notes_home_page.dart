@@ -6,7 +6,10 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'batch_notes_page.dart';
 import '../services/reminder_service.dart';
+import '../services/widget_service.dart';
+import '../utils/note_search_utils.dart';
 import '../widgets/note_reminder_button.dart';
+import '../widgets/note_search_bar.dart';
 
 class NotesHomePage extends StatefulWidget {
   const NotesHomePage({super.key});
@@ -18,10 +21,12 @@ class NotesHomePage extends StatefulWidget {
 class _NotesHomePageState extends State<NotesHomePage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   final String userId = FirebaseAuth.instance.currentUser!.uid;
   late final CollectionReference notesCollection;
   String? editingNoteId;
   bool _isBatchMode = false;
+  bool _showWidgetTip = false;
 
   @override
   void initState() {
@@ -30,6 +35,37 @@ class _NotesHomePageState extends State<NotesHomePage> {
         .collection('users')
         .doc(userId)
         .collection('notes');
+    _loadWidgetTip();
+  }
+
+  Future<void> _loadWidgetTip() async {
+    try {
+      final show = await WidgetService.instance.shouldShowHomeTip();
+      if (mounted) {
+        setState(() => _showWidgetTip = show);
+      }
+    } catch (_) {
+      // Ignore tip load errors.
+    }
+  }
+
+  Future<void> _dismissWidgetTip() async {
+    await WidgetService.instance.dismissHomeTip();
+    if (mounted) {
+      setState(() => _showWidgetTip = false);
+    }
+  }
+
+  void _openWidgetSetup() {
+    Navigator.pushNamed(context, '/widget-setup');
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _contentController.dispose();
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _addOrUpdateNote() async {
@@ -56,9 +92,11 @@ class _NotesHomePageState extends State<NotesHomePage> {
       });
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(wasEditing ? 'Note updated' : 'Note added')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(wasEditing ? 'Note updated' : 'Note added')),
+      );
+    }
 
     _titleController.clear();
     _contentController.clear();
@@ -146,12 +184,15 @@ class _NotesHomePageState extends State<NotesHomePage> {
     final Uri emailLaunchUri = Uri(
       scheme: 'mailto',
       path: 'vvmh2014@gmail.com',
-      );
+    );
 
     launchUrl(emailLaunchUri).catchError((error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not launch email client')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch email client')),
+        );
+      }
+      return false;
     });
   }
 
@@ -161,6 +202,13 @@ class _NotesHomePageState extends State<NotesHomePage> {
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text('Secure Notepad', style: TextStyle(color: Colors.indigo)),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: NoteSearchBar(
+            controller: _searchController,
+            onChanged: (_) => setState(() {}),
+          ),
+        ),
         actions: [
           Row(
             children: [
@@ -184,6 +232,8 @@ class _NotesHomePageState extends State<NotesHomePage> {
                 Navigator.pushNamed(context, '/locked-notes');
               } else if (value == 'our-apps') {
                 Navigator.pushNamed(context, '/our-apps');
+              } else if (value == 'widget-setup') {
+                _openWidgetSetup();
               } else if (value == 'invite') {
                 _inviteFriends();
               } else if (value == 'feedback') {
@@ -198,6 +248,16 @@ class _NotesHomePageState extends State<NotesHomePage> {
                     Icon(Icons.lock),
                     SizedBox(width: 8),
                     Text('Locked Notes'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'widget-setup',
+                child: Row(
+                  children: [
+                    Icon(Icons.widgets),
+                    SizedBox(width: 8),
+                    Text('Home Screen Widget'),
                   ],
                 ),
               ),
@@ -240,6 +300,51 @@ class _NotesHomePageState extends State<NotesHomePage> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
+              if (_showWidgetTip)
+                Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  color: Colors.indigo.shade50,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.widgets, color: Colors.indigo),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Add notes to your home screen',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Pin a widget to see your recent notes without opening the app.',
+                                style: TextStyle(fontSize: 13),
+                              ),
+                              TextButton(
+                                onPressed: _openWidgetSetup,
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: const Text('Set up widget'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 20),
+                          onPressed: _dismissWidgetTip,
+                          tooltip: 'Dismiss',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               TextField(
                 controller: _titleController,
                 decoration: const InputDecoration(
@@ -255,6 +360,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
                 decoration: const InputDecoration(
                   labelText: 'Content',
                   border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
                 ),
               ),
               const SizedBox(height: 10),
@@ -282,7 +388,6 @@ class _NotesHomePageState extends State<NotesHomePage> {
               StreamBuilder<QuerySnapshot>(
                 stream: notesCollection
                     .where('isLocked', isEqualTo: false)
-                    .where('isBatch', isEqualTo: false)
                     .orderBy('createdAt', descending: true)
                     .snapshots(),
                 builder: (context, snapshot) {
@@ -291,23 +396,40 @@ class _NotesHomePageState extends State<NotesHomePage> {
                   }
 
                   final notes = snapshot.data!.docs;
+                  WidgetService.instance.updateFromNotes(notes);
 
-                  if (notes.isEmpty) {
-                    return const Center(child: Text("No notes yet."));
+                  final regularNotes = notes.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return data['isBatch'] != true;
+                  }).toList();
+
+                  final filteredNotes = regularNotes.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return noteMatchesSearch(data, _searchController.text);
+                  }).toList();
+
+                  if (regularNotes.isEmpty) {
+                    return const Center(child: Text('No notes yet.'));
+                  }
+
+                  if (filteredNotes.isEmpty) {
+                    return const Center(child: Text('No notes match your search.'));
                   }
 
                   return ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: notes.length,
+                    itemCount: filteredNotes.length,
                     itemBuilder: (context, index) {
-                      final doc = notes[index];
+                      final doc = filteredNotes[index];
                       final data = doc.data() as Map<String, dynamic>;
                       final title = data['title'] ?? '';
                       final content = data['content'] ?? '';
                       final isCompleted = data['isCompleted'] ?? false;
                       final createdAt = _formatTimestamp(data['createdAt']);
                       final reminderAt = data['reminderAt'] as Timestamp?;
+                      final reminderRepeat =
+                          data['reminderRepeat'] as String?;
 
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 6),
@@ -316,7 +438,8 @@ class _NotesHomePageState extends State<NotesHomePage> {
                           onTap: () => _startEditingNote(doc.id, title, content),
                           leading: Checkbox(
                             value: isCompleted,
-                            onChanged: (value) => notesCollection.doc(doc.id).update({
+                            onChanged: (value) =>
+                                notesCollection.doc(doc.id).update({
                               'isCompleted': value ?? false,
                             }),
                           ),
@@ -334,7 +457,8 @@ class _NotesHomePageState extends State<NotesHomePage> {
                             children: [
                               const SizedBox(height: 4),
                               Container(
-                                constraints: const BoxConstraints(maxHeight: 100),
+                                constraints:
+                                    const BoxConstraints(maxHeight: 100),
                                 child: SingleChildScrollView(
                                   child: Text(
                                     content,
@@ -350,7 +474,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
                               const SizedBox(height: 6),
                               if (reminderAt != null)
                                 Text(
-                                  'Reminder: ${NoteReminderButton.formatReminder(reminderAt)}',
+                                  'Reminder: ${NoteReminderButton.formatReminderLabel(reminderAt, reminderRepeat)}',
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: Colors.orange,
@@ -359,7 +483,8 @@ class _NotesHomePageState extends State<NotesHomePage> {
                                 ),
                               Text(
                                 createdAt,
-                                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.grey),
                               ),
                             ],
                           ),
@@ -372,6 +497,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
                                 noteTitle: title,
                                 noteContent: content,
                                 reminderAt: reminderAt,
+                                reminderRepeat: reminderRepeat,
                               ),
                               IconButton(
                                 icon: const Icon(Icons.delete, color: Colors.red),

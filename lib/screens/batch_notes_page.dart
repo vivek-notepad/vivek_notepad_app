@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../services/reminder_service.dart';
+import '../services/widget_service.dart';
+import '../utils/reminder_dialog.dart';
 import '../widgets/note_reminder_button.dart';
 
 class BatchNotesPage extends StatefulWidget {
@@ -46,12 +48,239 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
           'text': _taskController.text.trim(),
           'isCompleted': false,
           'time': null,
+          'reminderAt': null,
+          'reminderRepeat': null,
         });
         _taskTimes[0] = null;
         _taskTimePickers[0] = false;
       });
       _taskController.clear();
     }
+  }
+
+  Map<String, dynamic> _taskToFirestore(Map<String, dynamic> task) {
+    return {
+      'text': task['text'],
+      'isCompleted': task['isCompleted'],
+      'time': task['time'],
+      'reminderAt': task['reminderAt'],
+      'reminderRepeat': task['reminderRepeat'],
+    };
+  }
+
+  Timestamp? _taskReminderAt(Map<String, dynamic> task) {
+    final value = task['reminderAt'];
+    if (value is Timestamp) return value;
+    return null;
+  }
+
+  String? _taskReminderRepeat(Map<String, dynamic> task) {
+    return task['reminderRepeat'] as String?;
+  }
+
+  Future<void> _scheduleAllTaskReminders(
+    String noteId,
+    String batchTitle,
+    List<Map<String, dynamic>> tasks,
+  ) async {
+    await ReminderService.instance.cancelAllBatchTaskReminders(noteId);
+    for (var i = 0; i < tasks.length; i++) {
+      final reminderAt = _taskReminderAt(tasks[i]);
+      if (reminderAt == null) continue;
+      await ReminderService.instance.scheduleBatchTaskReminder(
+        noteId: noteId,
+        taskIndex: i,
+        batchTitle: batchTitle,
+        taskText: tasks[i]['text']?.toString() ?? '',
+        scheduledAt: reminderAt.toDate(),
+        repeat: _taskReminderRepeat(tasks[i]),
+      );
+    }
+  }
+
+  Future<void> _handleTaskReminder(BuildContext context, int taskIndex) async {
+    final task = _tasks[taskIndex];
+    final result = await showReminderDialog(
+      context,
+      reminderAt: _taskReminderAt(task),
+      reminderRepeat: _taskReminderRepeat(task),
+      dialogTitle: 'Task Reminder',
+    );
+    if (result == null || !context.mounted) return;
+
+    if (result.cleared) {
+      setState(() {
+        _tasks[taskIndex]['reminderAt'] = null;
+        _tasks[taskIndex]['reminderRepeat'] = null;
+      });
+    } else {
+      setState(() {
+        _tasks[taskIndex]['reminderAt'] =
+            Timestamp.fromDate(result.scheduledAt!);
+        _tasks[taskIndex]['reminderRepeat'] =
+            result.repeat == 'none' ? null : result.repeat;
+      });
+    }
+
+    if (editingNoteId == null) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.cleared
+                ? 'Task reminder cleared. Save note to keep changes.'
+                : 'Task reminder set. Save note to activate it.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final title = _titleController.text.trim();
+    final tasksToSave = _tasks.map(_taskToFirestore).toList();
+
+    try {
+      await notesCollection.doc(editingNoteId).update({
+        'tasks': tasksToSave,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      await _scheduleAllTaskReminders(editingNoteId!, title, _tasks);
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not save task reminder: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (!context.mounted) return;
+    if (result.cleared) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Task reminder cleared')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Task reminder set: ${NoteReminderButton.formatReminderLabel(Timestamp.fromDate(result.scheduledAt!), result.repeat)}',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleSavedTaskReminder(
+    BuildContext context,
+    String noteId,
+    String batchTitle,
+    List<dynamic> tasks,
+    int taskIndex,
+  ) async {
+    final mutableTasks = tasks
+        .map((t) => Map<String, dynamic>.from(t as Map<String, dynamic>))
+        .toList();
+    final task = mutableTasks[taskIndex];
+    final result = await showReminderDialog(
+      context,
+      reminderAt: _taskReminderAt(task),
+      reminderRepeat: _taskReminderRepeat(task),
+      dialogTitle: 'Task Reminder',
+    );
+    if (result == null || !context.mounted) return;
+
+    if (result.cleared) {
+      mutableTasks[taskIndex]['reminderAt'] = null;
+      mutableTasks[taskIndex]['reminderRepeat'] = null;
+    } else {
+      mutableTasks[taskIndex]['reminderAt'] =
+          Timestamp.fromDate(result.scheduledAt!);
+      mutableTasks[taskIndex]['reminderRepeat'] =
+          result.repeat == 'none' ? null : result.repeat;
+    }
+
+    try {
+      await notesCollection.doc(noteId).update({
+        'tasks': mutableTasks,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      await _scheduleAllTaskReminders(noteId, batchTitle, mutableTasks);
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not save task reminder: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (!context.mounted) return;
+    if (result.cleared) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Task reminder cleared')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Task reminder set: ${NoteReminderButton.formatReminderLabel(Timestamp.fromDate(result.scheduledAt!), result.repeat)}',
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _taskReminderIcon({
+    required BuildContext context,
+    required int taskIndex,
+    required Map<String, dynamic> task,
+    double size = 20,
+  }) {
+    final reminderAt = _taskReminderAt(task);
+    return IconButton(
+      icon: Icon(
+        reminderAt != null ? Icons.alarm_on : Icons.alarm,
+        size: size,
+        color: reminderAt != null ? Colors.orange : Colors.indigo,
+      ),
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+      tooltip: reminderAt != null ? 'Edit task reminder' : 'Set task reminder',
+      onPressed: () => _handleTaskReminder(context, taskIndex),
+    );
+  }
+
+  Widget _savedTaskReminderIcon({
+    required BuildContext context,
+    required String noteId,
+    required String batchTitle,
+    required List<dynamic> tasks,
+    required int taskIndex,
+    required Map<String, dynamic> task,
+    double size = 18,
+  }) {
+    final reminderAt = _taskReminderAt(task);
+    return IconButton(
+      icon: Icon(
+        reminderAt != null ? Icons.alarm_on : Icons.alarm,
+        size: size,
+        color: reminderAt != null ? Colors.orange : Colors.indigo,
+      ),
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+      tooltip: reminderAt != null ? 'Edit task reminder' : 'Set task reminder',
+      onPressed: () => _handleSavedTaskReminder(
+        context,
+        noteId,
+        batchTitle,
+        tasks,
+        taskIndex,
+      ),
+    );
   }
 
   void _removeTask(int index) {
@@ -145,14 +374,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
     }
 
     try {
-      // Convert tasks to Firestore-compatible format
-      final tasksToSave = _tasks.map((task) {
-        return {
-          'text': task['text'],
-          'isCompleted': task['isCompleted'],
-          'time': task['time'],
-        };
-      }).toList();
+      final tasksToSave = _tasks.map(_taskToFirestore).toList();
 
       if (wasEditing) {
         await notesCollection.doc(editingNoteId).update({
@@ -160,8 +382,9 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
           'tasks': tasksToSave,
           'updatedAt': FieldValue.serverTimestamp(),
         });
+        await _scheduleAllTaskReminders(editingNoteId!, title, _tasks);
       } else {
-        await notesCollection.add({
+        final docRef = await notesCollection.add({
           'title': title,
           'tasks': tasksToSave,
           'isLocked': false,
@@ -169,9 +392,12 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
+        await _scheduleAllTaskReminders(docRef.id, title, _tasks);
       }
 
-      // Show success message
+      await WidgetService.instance.syncFromFirestore(userId);
+
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(wasEditing ? 'Note updated' : 'Note added'),
@@ -179,7 +405,6 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
         ),
       );
 
-      // Clear all fields
       _titleController.clear();
       setState(() {
         _tasks.clear();
@@ -188,6 +413,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
         editingNoteId = null;
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: ${e.toString()}'),
@@ -200,7 +426,9 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
   Future<void> _deleteNote(String docId) async {
     try {
       await ReminderService.instance.cancelReminder(docId);
+      await ReminderService.instance.cancelAllBatchTaskReminders(docId);
       await notesCollection.doc(docId).delete();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Note deleted'),
@@ -209,6 +437,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
       );
       _cancelEditing();
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error deleting note: ${e.toString()}'),
@@ -227,6 +456,8 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
           'text': task['text'],
           'isCompleted': task['isCompleted'],
           'time': task['time'],
+          'reminderAt': task['reminderAt'],
+          'reminderRepeat': task['reminderRepeat'],
         };
       }).toList();
       
@@ -332,11 +563,12 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                           child: TextField(
                             controller: _taskController,
                             decoration: InputDecoration(
-                              labelText: _editingTaskIndex != null 
-                                  ? 'Edit task' 
+                              labelText: _editingTaskIndex != null
+                                  ? 'Edit task'
                                   : 'Add a task',
                               border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                              contentPadding:
+                                  const EdgeInsets.symmetric(horizontal: 8),
                             ),
                             onSubmitted: (_) {
                               if (_editingTaskIndex != null) {
@@ -437,6 +669,11 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                                             });
                                           },
                                         ),
+                                        _taskReminderIcon(
+                                          context: context,
+                                          taskIndex: index,
+                                          task: task,
+                                        ),
                                         IconButton(
                                           icon: const Icon(Icons.delete, size: 20),
                                           onPressed: () => _removeTask(index),
@@ -460,6 +697,22 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                                     ],
                                   ),
                                   
+                                  if (_taskReminderAt(task) != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 48, bottom: 4),
+                                      child: Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Text(
+                                          'Reminder: ${NoteReminderButton.formatReminderLabel(_taskReminderAt(task), _taskReminderRepeat(task))}',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.orange,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
                                   // Time picker
                                   if (_taskTimePickers[index] == true)
                                     Padding(
@@ -556,13 +809,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                       final title = data['title'] ?? '';
                       final tasks = data['tasks'] as List<dynamic>? ?? [];
                       final createdAt = _formatTimestamp(data['createdAt']);
-                      final reminderAt = data['reminderAt'] as Timestamp?;
-                      final noteContent = tasks.isNotEmpty
-                          ? tasks
-                              .map((task) => task['text']?.toString() ?? '')
-                              .where((text) => text.isNotEmpty)
-                              .join('\n')
-                          : '';
+                      final noteTitle = title;
 
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 6),
@@ -581,6 +828,8 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                                         'text': task['text'],
                                         'isCompleted': value ?? false,
                                         'time': task['time'],
+                                        'reminderAt': task['reminderAt'],
+                                        'reminderRepeat': task['reminderRepeat'],
                                       };
                                     }).toList();
                                     notesCollection.doc(doc.id).update({
@@ -600,43 +849,71 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const SizedBox(height: 4),
-                                    ...tasks.take(3).map((task) {
+                                    ...tasks.take(3).toList().asMap().entries.map((entry) {
+                                      final taskIndex = entry.key;
+                                      final task = entry.value as Map<String, dynamic>;
                                       final time = task['time'] != null
                                           ? TimeOfDay(
                                               hour: task['time']['hour'],
                                               minute: task['time']['minute'])
                                           : null;
+                                      final taskReminderAt = _taskReminderAt(task);
                                       
-                                      return Row(
+                                      return Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Icon(
-                                            task['isCompleted'] 
-                                                ? Icons.check_circle 
-                                                : Icons.radio_button_unchecked,
-                                            size: 16,
-                                            color: task['isCompleted'] 
-                                                ? Colors.green 
-                                                : Colors.grey,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              task['text'],
-                                              style: TextStyle(
-                                                decoration: task['isCompleted']
-                                                    ? TextDecoration.lineThrough
-                                                    : TextDecoration.none,
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                task['isCompleted'] 
+                                                    ? Icons.check_circle 
+                                                    : Icons.radio_button_unchecked,
+                                                size: 16,
+                                                color: task['isCompleted'] 
+                                                    ? Colors.green 
+                                                    : Colors.grey,
                                               ),
-                                            ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  task['text'],
+                                                  style: TextStyle(
+                                                    decoration: task['isCompleted']
+                                                        ? TextDecoration.lineThrough
+                                                        : TextDecoration.none,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (time != null)
+                                                Padding(
+                                                  padding: const EdgeInsets.only(left: 8),
+                                                  child: Text(
+                                                    _formatTimeOfDay(time),
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                      color: Colors.blue,
+                                                    ),
+                                                  ),
+                                                ),
+                                              _savedTaskReminderIcon(
+                                                context: context,
+                                                noteId: doc.id,
+                                                batchTitle: noteTitle,
+                                                tasks: tasks,
+                                                taskIndex: taskIndex,
+                                                task: task,
+                                              ),
+                                            ],
                                           ),
-                                          if (time != null)
+                                          if (taskReminderAt != null)
                                             Padding(
-                                              padding: const EdgeInsets.only(left: 8),
+                                              padding: const EdgeInsets.only(left: 24, bottom: 2),
                                               child: Text(
-                                                _formatTimeOfDay(time),
+                                                'Reminder: ${NoteReminderButton.formatReminderLabel(taskReminderAt, _taskReminderRepeat(task))}',
                                                 style: const TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.blue,
+                                                  fontSize: 11,
+                                                  color: Colors.orange,
+                                                  fontWeight: FontWeight.w600,
                                                 ),
                                               ),
                                             ),
@@ -652,54 +929,19 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                                         ),
                                       ),
                                     const SizedBox(height: 6),
-                                    if (reminderAt != null)
-                                      Text(
-                                        'Reminder: ${NoteReminderButton.formatReminder(reminderAt)}',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.orange,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
                                     Text(
                                       createdAt,
                                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                                     ),
                                   ],
                                 )
-                              : Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (reminderAt != null)
-                                      Text(
-                                        'Reminder: ${NoteReminderButton.formatReminder(reminderAt)}',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.orange,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    Text(
-                                      createdAt,
-                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                                    ),
-                                  ],
+                              : Text(
+                                  createdAt,
+                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                                 ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              NoteReminderButton(
-                                notesCollection: notesCollection,
-                                noteId: doc.id,
-                                noteTitle: title,
-                                noteContent: noteContent,
-                                reminderAt: reminderAt,
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => _confirmDeleteNote(doc.id),
-                              ),
-                            ],
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _confirmDeleteNote(doc.id),
                           ),
                           isThreeLine: tasks.isNotEmpty,
                         ),

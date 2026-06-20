@@ -4,7 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../services/secure_storage_service.dart';
 import '../services/reminder_service.dart';
+import '../utils/note_search_utils.dart';
 import '../widgets/note_reminder_button.dart';
+import '../widgets/note_search_bar.dart';
 
 class LockedNotesPage extends StatefulWidget {
   const LockedNotesPage({super.key});
@@ -19,6 +21,7 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   String? editingNoteId;
   late final CollectionReference notesCollection;
   bool _isAuthenticated = false;
@@ -383,6 +386,14 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text('Locked Notes', style: TextStyle(color: Colors.indigo)),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: NoteSearchBar(
+            controller: _searchController,
+            onChanged: (_) => setState(() {}),
+            hintText: 'Search locked notes',
+          ),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -404,6 +415,7 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
                 decoration: const InputDecoration(
                   labelText: 'Content',
                   border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
                 ),
               ),
               const SizedBox(height: 10),
@@ -439,23 +451,34 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
                   }
 
                   final notes = snapshot.data!.docs;
+                  final filteredNotes = notes.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return noteMatchesSearch(data, _searchController.text);
+                  }).toList();
 
                   if (notes.isEmpty) {
                     return const Center(child: Text("No locked notes yet."));
                   }
 
+                  if (filteredNotes.isEmpty) {
+                    return const Center(
+                        child: Text('No locked notes match your search.'));
+                  }
+
                   return ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: notes.length,
+                    itemCount: filteredNotes.length,
                     itemBuilder: (context, index) {
-                      final doc = notes[index];
+                      final doc = filteredNotes[index];
                       final data = doc.data() as Map<String, dynamic>;
                       final title = data['title'] ?? '';
                       final content = data['content'] ?? '';
                       final isCompleted = data['isCompleted'] ?? false;
                       final createdAt = _formatTimestamp(data['createdAt']);
                       final reminderAt = data['reminderAt'] as Timestamp?;
+                      final reminderRepeat =
+                          data['reminderRepeat'] as String?;
 
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 6),
@@ -498,7 +521,7 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
                               const SizedBox(height: 6),
                               if (reminderAt != null)
                                 Text(
-                                  'Reminder: ${NoteReminderButton.formatReminder(reminderAt)}',
+                                  'Reminder: ${NoteReminderButton.formatReminderLabel(reminderAt, reminderRepeat)}',
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: Colors.orange,
@@ -520,6 +543,7 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
                                 noteTitle: title,
                                 noteContent: content,
                                 reminderAt: reminderAt,
+                                reminderRepeat: reminderRepeat,
                               ),
                               IconButton(
                                 icon: const Icon(Icons.delete, color: Colors.red),

@@ -6,14 +6,17 @@ import 'screens/notes_home_page.dart';
 import 'screens/locked_notes_page.dart';
 import 'screens/security_setup_page.dart';
 import 'screens/our_apps_page.dart';
+import 'screens/widget_setup_page.dart';
 import 'services/reminder_service.dart';
 import 'services/update_notification_service.dart';
+import 'services/widget_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   await Firebase.initializeApp();
   await FirebaseAuth.instance.signInAnonymously();
+  await WidgetService.instance.init();
   await ReminderService.instance.init(
     onNotificationTap: UpdateNotificationService.handleNotificationResponse,
   );
@@ -21,6 +24,7 @@ void main() async {
   final userId = FirebaseAuth.instance.currentUser?.uid;
   if (userId != null) {
     await ReminderService.instance.syncRemindersFromFirestore(userId);
+    await WidgetService.instance.syncFromFirestore(userId);
   }
   runApp(const NotepadApp());
 }
@@ -41,6 +45,7 @@ class NotepadApp extends StatelessWidget {
         '/locked-notes': (context) => const LockedNotesPage(),
         '/security-setup': (context) => const SecuritySetupPage(),
         '/our-apps': (context) => const OurAppsPage(),
+        '/widget-setup': (context) => const WidgetSetupPage(),
       },
     );
   }
