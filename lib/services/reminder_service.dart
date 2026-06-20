@@ -17,7 +17,9 @@ class ReminderService {
       _plugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
 
-  Future<void> init() async {
+  Future<void> init({
+    void Function(NotificationResponse)? onNotificationTap,
+  }) async {
     if (_initialized) return;
 
     tz.initializeTimeZones();
@@ -32,9 +34,12 @@ class ReminderService {
         AndroidInitializationSettings('@mipmap/ic_launcher');
     const settings = InitializationSettings(android: androidSettings);
 
-    await _plugin.initialize(settings);
+    await _plugin.initialize(
+      settings,
+      onDidReceiveNotificationResponse: onNotificationTap,
+    );
 
-    const channel = AndroidNotificationChannel(
+    const reminderChannel = AndroidNotificationChannel(
       'note_reminders',
       'Note Reminders',
       description: 'Reminders for your saved notes',
@@ -42,7 +47,16 @@ class ReminderService {
       playSound: true,
       enableVibration: true,
     );
-    await _androidPlugin?.createNotificationChannel(channel);
+    const updateChannel = AndroidNotificationChannel(
+      'app_updates',
+      'App Updates',
+      description: 'Notifications about new app versions',
+      importance: Importance.max,
+      playSound: true,
+      enableVibration: true,
+    );
+    await _androidPlugin?.createNotificationChannel(reminderChannel);
+    await _androidPlugin?.createNotificationChannel(updateChannel);
 
     _initialized = true;
   }
@@ -150,6 +164,35 @@ class ReminderService {
   Future<void> cancelReminder(String noteId) async {
     await init();
     await _plugin.cancel(notificationIdForNote(noteId));
+  }
+
+  static const int appUpdateNotificationId = 900001;
+
+  Future<void> showAppUpdateNotification({
+    required String title,
+    required String body,
+  }) async {
+    await ensurePermissions();
+
+    const details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'app_updates',
+        'App Updates',
+        channelDescription: 'Notifications about new app versions',
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
+      ),
+    );
+
+    await _plugin.show(
+      appUpdateNotificationId,
+      title,
+      body,
+      details,
+      payload: 'app_update',
+    );
   }
 
   Future<void> syncRemindersFromFirestore(String userId) async {

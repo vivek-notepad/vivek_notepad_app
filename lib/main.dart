@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'screens/notes_home_page.dart';
 import 'screens/locked_notes_page.dart';
 import 'screens/security_setup_page.dart';
 import 'screens/our_apps_page.dart';
 import 'services/reminder_service.dart';
+import 'services/update_notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   await Firebase.initializeApp();
   await FirebaseAuth.instance.signInAnonymously();
-  await ReminderService.instance.init();
+  await ReminderService.instance.init(
+    onNotificationTap: UpdateNotificationService.handleNotificationResponse,
+  );
+  await UpdateNotificationService.instance.init();
   final userId = FirebaseAuth.instance.currentUser?.uid;
   if (userId != null) {
     await ReminderService.instance.syncRemindersFromFirestore(userId);

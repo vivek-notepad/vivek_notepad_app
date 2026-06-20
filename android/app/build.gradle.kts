@@ -72,4 +72,5 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")           // Firebase Analytics
     implementation("com.google.firebase:firebase-firestore")           // Firestore
     implementation("com.google.firebase:firebase-auth")                // Firebase Auth
+    implementation("com.google.firebase:firebase-messaging")           // Push notifications
 }
