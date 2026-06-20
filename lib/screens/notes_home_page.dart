@@ -196,6 +196,30 @@ class _NotesHomePageState extends State<NotesHomePage> {
     });
   }
 
+  Future<void> _rateApp() async {
+    const packageId = 'com.viveksingh.notepad_app';
+    final marketUri = Uri.parse('market://details?id=$packageId');
+    final webUri = Uri.parse(
+      'https://play.google.com/store/apps/details?id=$packageId',
+    );
+
+    if (await canLaunchUrl(marketUri)) {
+      await launchUrl(marketUri, mode: LaunchMode.externalApplication);
+      return;
+    }
+
+    if (await canLaunchUrl(webUri)) {
+      await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      return;
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open Google Play Store')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -238,6 +262,8 @@ class _NotesHomePageState extends State<NotesHomePage> {
                 _inviteFriends();
               } else if (value == 'feedback') {
                 _sendFeedback();
+              } else if (value == 'rate-us') {
+                _rateApp();
               }
             },
             itemBuilder: (BuildContext context) => [
@@ -288,6 +314,16 @@ class _NotesHomePageState extends State<NotesHomePage> {
                     Icon(Icons.feedback),
                     SizedBox(width: 8),
                     Text('Send feedback'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'rate-us',
+                child: Row(
+                  children: [
+                    Icon(Icons.star),
+                    SizedBox(width: 8),
+                    Text('Rate us'),
                   ],
                 ),
               ),
