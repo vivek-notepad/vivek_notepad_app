@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:simple_notepad/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,6 +9,7 @@ import 'batch_notes_page.dart';
 import '../services/reminder_service.dart';
 import '../services/speech_service.dart';
 import '../services/widget_service.dart';
+import '../utils/reminder_formatter.dart';
 import '../utils/note_search_utils.dart';
 import '../widgets/note_reminder_button.dart';
 import '../widgets/note_search_bar.dart';
@@ -71,6 +73,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
   }
 
   void _addOrUpdateNote() async {
+    final l10n = AppLocalizations.of(context)!;
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
 
@@ -96,7 +99,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(wasEditing ? 'Note updated' : 'Note added')),
+        SnackBar(content: Text(wasEditing ? l10n.noteUpdated : l10n.noteAdded)),
       );
     }
 
@@ -108,15 +111,16 @@ class _NotesHomePageState extends State<NotesHomePage> {
   }
 
   void _confirmDeleteNote(String docId) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Note'),
-        content: const Text('Are you sure you want to delete this note?'),
+        title: Text(l10n.deleteNote),
+        content: Text(l10n.deleteNoteConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -130,7 +134,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
                 setState(() {});
               }
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -152,10 +156,10 @@ class _NotesHomePageState extends State<NotesHomePage> {
     setState(() {});
   }
 
-  String _formatTimestamp(Timestamp? timestamp) {
+  String _formatTimestamp(Timestamp? timestamp, String localeName) {
     if (timestamp == null) return '';
     final date = timestamp.toDate();
-    return DateFormat.yMMMd().add_jm().format(date);
+    return DateFormat.yMMMd(localeName).add_jm().format(date);
   }
 
   void _navigateToBatchNotes() {
@@ -177,14 +181,14 @@ class _NotesHomePageState extends State<NotesHomePage> {
     });
   }
 
-  void _inviteFriends() {
+  void _inviteFriends(AppLocalizations l10n) {
     Share.share(
-      'Check out this awesome Secure Notepad app! It helps me stay organized and secure my notes.\n\nDownload it here: [https://play.google.com/store/apps/details?id=com.viveksingh.notepad_app&pli=1]',
-      subject: 'Try Secure Notepad App',
+      l10n.inviteShareText,
+      subject: l10n.inviteShareSubject,
     );
   }
 
-  void _sendFeedback() {
+  void _sendFeedback(AppLocalizations l10n) {
     final Uri emailLaunchUri = Uri(
       scheme: 'mailto',
       path: 'vvmh2014@gmail.com',
@@ -193,14 +197,14 @@ class _NotesHomePageState extends State<NotesHomePage> {
     launchUrl(emailLaunchUri).catchError((error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not launch email client')),
+          SnackBar(content: Text(l10n.couldNotLaunchEmail)),
         );
       }
       return false;
     });
   }
 
-  Future<void> _rateApp() async {
+  Future<void> _rateApp(AppLocalizations l10n) async {
     const packageId = 'com.viveksingh.notepad_app';
     final marketUri = Uri.parse('market://details?id=$packageId');
     final webUri = Uri.parse(
@@ -219,28 +223,30 @@ class _NotesHomePageState extends State<NotesHomePage> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open Google Play Store')),
+        SnackBar(content: Text(l10n.couldNotOpenPlayStore)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: const Text('Secure Notepad', style: TextStyle(color: Colors.indigo)),
+        title: Text(l10n.appTitle, style: const TextStyle(color: Colors.indigo)),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
           child: NoteSearchBar(
             controller: _searchController,
             onChanged: (_) => setState(() {}),
+            hintText: l10n.searchNotes,
           ),
         ),
         actions: [
           Row(
             children: [
-              const Text('Batch Mode'),
+              Text(l10n.batchMode),
               Switch(
                 value: _isBatchMode,
                 onChanged: (value) {
@@ -263,71 +269,83 @@ class _NotesHomePageState extends State<NotesHomePage> {
               } else if (value == 'widget-setup') {
                 _openWidgetSetup();
               } else if (value == 'invite') {
-                _inviteFriends();
+                _inviteFriends(l10n);
               } else if (value == 'feedback') {
-                _sendFeedback();
+                _sendFeedback(l10n);
+              } else if (value == 'language') {
+                Navigator.pushNamed(context, '/language');
               } else if (value == 'rate-us') {
-                _rateApp();
+                _rateApp(l10n);
               }
             },
             itemBuilder: (BuildContext context) => [
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: 'locked-notes',
                 child: Row(
                   children: [
                     Icon(Icons.lock),
                     SizedBox(width: 8),
-                    Text('Locked Notes'),
+                    Text(l10n.lockedNotes),
                   ],
                 ),
               ),
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: 'widget-setup',
                 child: Row(
                   children: [
                     Icon(Icons.widgets),
                     SizedBox(width: 8),
-                    Text('Home Screen Widget'),
+                    Text(l10n.homeScreenWidget),
                   ],
                 ),
               ),
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: 'our-apps',
                 child: Row(
                   children: [
                     Icon(Icons.apps),
                     SizedBox(width: 8),
-                    Text('Our New Apps'),
+                    Text(l10n.ourNewApps),
                   ],
                 ),
               ),
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: 'invite',
                 child: Row(
                   children: [
                     Icon(Icons.share),
                     SizedBox(width: 8),
-                    Text('Invite friends to the app'),
+                    Text(l10n.inviteFriends),
                   ],
                 ),
               ),
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: 'feedback',
                 child: Row(
                   children: [
                     Icon(Icons.feedback),
                     SizedBox(width: 8),
-                    Text('Send feedback'),
+                    Text(l10n.sendFeedback),
                   ],
                 ),
               ),
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
+                value: 'language',
+                child: Row(
+                  children: [
+                    const Icon(Icons.language),
+                    const SizedBox(width: 8),
+                    Text(l10n.language),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
                 value: 'rate-us',
                 child: Row(
                   children: [
                     Icon(Icons.star),
                     SizedBox(width: 8),
-                    Text('Rate us'),
+                    Text(l10n.rateUs),
                   ],
                 ),
               ),
@@ -355,13 +373,13 @@ class _NotesHomePageState extends State<NotesHomePage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Add notes to your home screen',
+                              Text(
+                                l10n.addNotesToHomeScreen,
                                 style: TextStyle(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 4),
-                              const Text(
-                                'Pin a widget to see your recent notes without opening the app.',
+                              Text(
+                                l10n.widgetTipDescription,
                                 style: TextStyle(fontSize: 13),
                               ),
                               TextButton(
@@ -371,7 +389,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
                                   minimumSize: Size.zero,
                                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                 ),
-                                child: const Text('Set up widget'),
+                                child: Text(l10n.setUpWidget),
                               ),
                             ],
                           ),
@@ -379,7 +397,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
                         IconButton(
                           icon: const Icon(Icons.close, size: 20),
                           onPressed: _dismissWidgetTip,
-                          tooltip: 'Dismiss',
+                          tooltip: l10n.dismiss,
                         ),
                       ],
                     ),
@@ -388,7 +406,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
               TextField(
                 controller: _titleController,
                 decoration: InputDecoration(
-                  labelText: 'Title',
+                  labelText: l10n.title,
                   border: const OutlineInputBorder(),
                   suffixIcon: VoiceInputButton(controller: _titleController),
                 ),
@@ -399,7 +417,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
                 minLines: 3,
                 maxLines: null,
                 decoration: InputDecoration(
-                  labelText: 'Content',
+                  labelText: l10n.content,
                   border: const OutlineInputBorder(),
                   alignLabelWithHint: true,
                   suffixIcon: VoiceInputButton(controller: _contentController),
@@ -415,13 +433,13 @@ class _NotesHomePageState extends State<NotesHomePage> {
                       backgroundColor: Colors.indigo,
                       foregroundColor: Colors.white,
                     ),
-                    child: Text(editingNoteId == null ? 'Add Note' : 'Update Note'),
+                    child: Text(editingNoteId == null ? l10n.addNote : l10n.updateNote),
                   ),
                   if (editingNoteId != null) ...[
                     const SizedBox(width: 10),
                     TextButton(
                       onPressed: _cancelEditing,
-                      child: const Text('Cancel'),
+                      child: Text(l10n.cancel),
                     ),
                   ],
                 ],
@@ -451,11 +469,11 @@ class _NotesHomePageState extends State<NotesHomePage> {
                   }).toList();
 
                   if (regularNotes.isEmpty) {
-                    return const Center(child: Text('No notes yet.'));
+                    return Center(child: Text(l10n.noNotesYet));
                   }
 
                   if (filteredNotes.isEmpty) {
-                    return const Center(child: Text('No notes match your search.'));
+                    return Center(child: Text(l10n.noNotesMatchSearch));
                   }
 
                   return ListView.builder(
@@ -468,7 +486,8 @@ class _NotesHomePageState extends State<NotesHomePage> {
                       final title = data['title'] ?? '';
                       final content = data['content'] ?? '';
                       final isCompleted = data['isCompleted'] ?? false;
-                      final createdAt = _formatTimestamp(data['createdAt']);
+                      final createdAt =
+                          _formatTimestamp(data['createdAt'], l10n.localeName);
                       final reminderAt = data['reminderAt'] as Timestamp?;
                       final reminderRepeat =
                           data['reminderRepeat'] as String?;
@@ -516,7 +535,13 @@ class _NotesHomePageState extends State<NotesHomePage> {
                               const SizedBox(height: 6),
                               if (reminderAt != null)
                                 Text(
-                                  'Reminder: ${NoteReminderButton.formatReminderLabel(reminderAt, reminderRepeat)}',
+                                  l10n.reminderLabel(
+                                    ReminderFormatter.formatReminderLabel(
+                                      l10n,
+                                      reminderAt,
+                                      reminderRepeat,
+                                    ),
+                                  ),
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: Colors.orange,

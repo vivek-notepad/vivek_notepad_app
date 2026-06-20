@@ -1,0 +1,217 @@
+{
+  "@@locale": "en",
+  "appTitle": "Secure Notepad",
+  "searchNotes": "Search notes",
+  "searchLockedNotes": "Search locked notes",
+  "batchMode": "Batch Mode",
+  "lockedNotes": "Locked Notes",
+  "homeScreenWidget": "Home Screen Widget",
+  "ourNewApps": "Our New Apps",
+  "inviteFriends": "Invite friends to the app",
+  "sendFeedback": "Send feedback",
+  "rateUs": "Rate us",
+  "language": "Language",
+  "selectLanguage": "Select Language",
+  "languageChanged": "Language updated",
+  "english": "English",
+  "hindi": "Hindi",
+  "spanish": "Spanish",
+  "french": "French",
+  "indonesian": "Indonesian",
+  "brazilianPortuguese": "Portuguese (Brazil)",
+  "systemDefault": "System default",
+  "addNotesToHomeScreen": "Add notes to your home screen",
+  "widgetTipDescription": "Pin a widget to see your recent notes without opening the app.",
+  "setUpWidget": "Set up widget",
+  "dismiss": "Dismiss",
+  "title": "Title",
+  "content": "Content",
+  "addNote": "Add Note",
+  "updateNote": "Update Note",
+  "cancel": "Cancel",
+  "deleteNote": "Delete Note",
+  "deleteNoteConfirm": "Are you sure you want to delete this note?",
+  "delete": "Delete",
+  "noteAdded": "Note added",
+  "noteUpdated": "Note updated",
+  "noNotesYet": "No notes yet.",
+  "noNotesMatchSearch": "No notes match your search.",
+  "reminderLabel": "Reminder: {label}",
+  "@reminderLabel": {
+    "placeholders": {
+      "label": { "type": "String" }
+    }
+  },
+  "couldNotLaunchEmail": "Could not launch email client",
+  "couldNotOpenPlayStore": "Could not open Google Play Store",
+  "inviteShareSubject": "Try Secure Notepad App",
+  "inviteShareText": "Check out this awesome Secure Notepad app! It helps me stay organized and secure my notes.\n\nDownload it here: https://play.google.com/store/apps/details?id=com.viveksingh.notepad_app&pli=1",
+  "setUpPassword": "Set Up Password",
+  "setPassword": "Set Password",
+  "selectSecurityQuestion": "Select security question",
+  "answer": "Answer",
+  "save": "Save",
+  "pleaseFillAllFields": "Please fill all fields",
+  "passwordSecuritySet": "Password and security question set",
+  "enterPassword": "Enter Password",
+  "password": "Password",
+  "submit": "Submit",
+  "forgotPassword": "Forgot Password",
+  "error": "Error",
+  "securityQuestionNotSet": "Security question not set",
+  "ok": "OK",
+  "securityQuestion": "Security Question",
+  "incorrectPassword": "Incorrect password",
+  "incorrectAnswer": "Incorrect answer",
+  "verify": "Verify",
+  "resetPassword": "Reset Password",
+  "newPassword": "New Password",
+  "pleaseEnterNewPassword": "Please enter a new password",
+  "passwordResetSuccess": "Password reset successfully",
+  "noLockedNotesYet": "No locked notes yet.",
+  "noLockedNotesMatchSearch": "No locked notes match your search.",
+  "securitySetup": "Security Setup",
+  "setUpSecurityQuestion": "Set up security question",
+  "selectSecurityQuestionPrompt": "Select a security question:",
+  "saveSecuritySetup": "Save Security Setup",
+  "pleaseSelectQuestionAndAnswer": "Please select a question and provide an answer",
+  "securitySetupCompleted": "Security setup completed successfully",
+  "securityQuestionDob": "What is your date of birth?",
+  "securityQuestionFood": "What is your favorite food?",
+  "securityQuestionPlace": "Which is your favorite place?",
+  "batchNotes": "Batch Notes",
+  "addTask": "Add a task",
+  "editTask": "Edit task",
+  "saveBatchNote": "Save Batch Note",
+  "noBatchNotesYet": "No batch notes yet.",
+  "noteDeleted": "Note deleted",
+  "errorMessage": "Error: {message}",
+  "@errorMessage": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "errorDeletingNote": "Error deleting note: {message}",
+  "@errorDeletingNote": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "taskReminder": "Task Reminder",
+  "taskReminderCleared": "Task reminder cleared",
+  "taskReminderClearedSave": "Task reminder cleared. Save note to keep changes.",
+  "taskReminderSetSave": "Task reminder set. Save note to activate it.",
+  "taskReminderSet": "Task reminder set: {label}",
+  "@taskReminderSet": {
+    "placeholders": {
+      "label": { "type": "String" }
+    }
+  },
+  "couldNotSaveTaskReminder": "Could not save task reminder: {message}",
+  "@couldNotSaveTaskReminder": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "editTaskReminder": "Edit task reminder",
+  "setTaskReminder": "Set task reminder",
+  "setReminder": "Set Reminder",
+  "repeat": "Repeat",
+  "once": "Once",
+  "daily": "Daily",
+  "weekly": "Weekly",
+  "monthly": "Monthly",
+  "date": "Date",
+  "startDate": "Start date",
+  "time": "Time",
+  "clear": "Clear",
+  "reminderCleared": "Reminder cleared",
+  "pleaseChooseFutureDateTime": "Please choose a future date and time",
+  "couldNotScheduleReminder": "Could not schedule reminder. Allow notifications and alarms in phone settings.",
+  "reminderSet": "Reminder set: {label}",
+  "@reminderSet": {
+    "placeholders": {
+      "label": { "type": "String" }
+    }
+  },
+  "editReminder": "Edit reminder",
+  "setReminderAction": "Set reminder",
+  "moreTasks": "+ {count} more tasks",
+  "@moreTasks": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "install": "Install",
+  "moreAppsComingSoon": "More apps coming soon.\nCheck back later!",
+  "seeNotesOnHomeScreen": "See your notes on your home screen",
+  "widgetDescription": "The widget shows your 5 most recent notes and opens the app when you tap it. It updates automatically when you add or edit notes.",
+  "widgetInstalled": "Widget is on your home screen",
+  "addWidgetToHomeScreen": "Add Widget to Home Screen",
+  "showHowToAddWidget": "Show How to Add Widget",
+  "refreshWidgetNow": "Refresh Widget Now",
+  "howToAddManually": "How to add manually",
+  "widgetStep1": "Go to your phone home screen",
+  "widgetStep2": "Long-press on empty space",
+  "widgetStep3": "Tap Widgets",
+  "widgetStep4": "Find \"Secure Notepad Notes\"",
+  "widgetStep5": "Drag it to your home screen",
+  "widgetOldDataTip": "If the widget shows old data, open the app once or tap \"Refresh Widget Now\" above.",
+  "addWidgetManually": "Add widget manually",
+  "widgetManualDialogContent": "1. Go to your phone home screen\n2. Long-press on empty space\n3. Tap Widgets\n4. Find \"Secure Notepad Notes\"\n5. Drag it to your home screen",
+  "gotIt": "Got it",
+  "confirmAddWidget": "Confirm adding the widget when your phone asks.",
+  "couldNotOpenWidgetPicker": "Could not open widget picker. Use manual steps below.",
+  "couldNotAddWidget": "Could not add widget: {message}",
+  "@couldNotAddWidget": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "widgetRefreshed": "Home screen widget refreshed",
+  "couldNotRefreshWidgetRetry": "Could not refresh widget. Open the app and try again.",
+  "couldNotRefreshWidget": "Could not refresh widget: {message}",
+  "@couldNotRefreshWidget": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "couldNotLoadWidgetStatus": "Could not load widget status: {message}",
+  "@couldNotLoadWidgetStatus": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "voiceInput": "Voice input",
+  "stopVoiceInput": "Stop voice input",
+  "micPermissionRequired": "Microphone permission is required for voice input.",
+  "micPermissionDeniedSettings": "Microphone permission denied. Enable it in app settings.",
+  "voiceInputNotAvailable": "Voice input is not available on this device.",
+  "dailyAt": "Daily at {time}",
+  "@dailyAt": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "weeklyOn": "Weekly on {day} at {time}",
+  "@weeklyOn": {
+    "placeholders": {
+      "day": { "type": "String" },
+      "time": { "type": "String" }
+    }
+  },
+  "monthlyOnDay": "Monthly on day {day} at {time}",
+  "@monthlyOnDay": {
+    "placeholders": {
+      "day": { "type": "String" },
+      "time": { "type": "String" }
+    }
+  },
+  "dateAtTime": "{date} at {time}",
+  "@dateAtTime": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "time": { "type": "String" }
+    }
+  }
+}

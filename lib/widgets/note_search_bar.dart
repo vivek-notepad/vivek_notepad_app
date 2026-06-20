@@ -9,7 +9,7 @@ class NoteSearchBar extends StatelessWidget implements PreferredSizeWidget {
     super.key,
     required this.controller,
     required this.onChanged,
-    this.hintText = 'Search notes',
+    required this.hintText,
   });
 
   @override

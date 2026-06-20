@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:simple_notepad/l10n/app_localizations.dart';
 import '../services/reminder_service.dart';
+import '../utils/reminder_formatter.dart';
 
 class NoteReminderButton extends StatelessWidget {
   final CollectionReference notesCollection;
@@ -21,27 +22,16 @@ class NoteReminderButton extends StatelessWidget {
     this.reminderRepeat,
   });
 
-  static String formatReminder(Timestamp? timestamp) {
-    if (timestamp == null) return '';
-    return DateFormat.yMMMd().add_jm().format(timestamp.toDate());
-  }
-
-  static String formatReminderLabel(Timestamp? timestamp, String? repeat) {
-    if (timestamp == null) return '';
-    final time = DateFormat.jm().format(timestamp.toDate());
-    switch (repeat) {
-      case 'daily':
-        return 'Daily at $time';
-      case 'weekly':
-        return 'Weekly on ${DateFormat.E().format(timestamp.toDate())} at $time';
-      case 'monthly':
-        return 'Monthly on day ${timestamp.toDate().day} at $time';
-      default:
-        return formatReminder(timestamp);
-    }
+  static String formatReminderLabel(
+    AppLocalizations l10n,
+    Timestamp? timestamp,
+    String? repeat,
+  ) {
+    return ReminderFormatter.formatReminderLabel(l10n, timestamp, repeat);
   }
 
   Future<void> _showReminderDialog(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     DateTime selectedDate = reminderAt?.toDate() ?? DateTime.now();
     TimeOfDay selectedTime = reminderAt != null
         ? TimeOfDay.fromDateTime(reminderAt!.toDate())
@@ -54,8 +44,14 @@ class NoteReminderButton extends StatelessWidget {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             final reminderLabel = selectedRepeat == 'none'
-                ? '${DateFormat.yMMMd().format(selectedDate)} at ${selectedTime.format(context)}'
+                ? ReminderFormatter.onceLabel(
+                    l10n,
+                    selectedDate,
+                    selectedTime,
+                    context,
+                  )
                 : formatReminderLabel(
+                    l10n,
                     Timestamp.fromDate(DateTime(
                       selectedDate.year,
                       selectedDate.month,
@@ -67,7 +63,7 @@ class NoteReminderButton extends StatelessWidget {
                   );
 
             return AlertDialog(
-              title: const Text('Set Reminder'),
+              title: Text(l10n.setReminder),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -83,17 +79,15 @@ class NoteReminderButton extends StatelessWidget {
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
                       value: selectedRepeat,
-                      decoration: const InputDecoration(
-                        labelText: 'Repeat',
+                      decoration: InputDecoration(
+                        labelText: l10n.repeat,
                         border: OutlineInputBorder(),
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 'none', child: Text('Once')),
-                        DropdownMenuItem(value: 'daily', child: Text('Daily')),
-                        DropdownMenuItem(
-                            value: 'weekly', child: Text('Weekly')),
-                        DropdownMenuItem(
-                            value: 'monthly', child: Text('Monthly')),
+                      items: [
+                        DropdownMenuItem(value: 'none', child: Text(l10n.once)),
+                        DropdownMenuItem(value: 'daily', child: Text(l10n.daily)),
+                        DropdownMenuItem(value: 'weekly', child: Text(l10n.weekly)),
+                        DropdownMenuItem(value: 'monthly', child: Text(l10n.monthly)),
                       ],
                       onChanged: (value) {
                         if (value != null) {
@@ -120,7 +114,9 @@ class NoteReminderButton extends StatelessWidget {
                             },
                             icon: const Icon(Icons.calendar_today, size: 18),
                             label: Text(
-                              selectedRepeat == 'none' ? 'Date' : 'Start date',
+                              selectedRepeat == 'none'
+                                  ? l10n.date
+                                  : l10n.startDate,
                             ),
                           ),
                         ),
@@ -137,7 +133,7 @@ class NoteReminderButton extends StatelessWidget {
                               }
                             },
                             icon: const Icon(Icons.access_time, size: 18),
-                            label: const Text('Time'),
+                            label: Text(l10n.time),
                           ),
                         ),
                       ],
@@ -149,18 +145,18 @@ class NoteReminderButton extends StatelessWidget {
                 if (reminderAt != null)
                   TextButton(
                     onPressed: () => Navigator.pop(dialogContext, 'clear'),
-                    child: const Text(
-                      'Clear',
+                    child: Text(
+                      l10n.clear,
                       style: TextStyle(color: Colors.red),
                     ),
                   ),
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Cancel'),
+                  child: Text(l10n.cancel),
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext, 'set'),
-                  child: const Text('Set Reminder'),
+                  child: Text(l10n.setReminder),
                 ),
               ],
             );
@@ -179,7 +175,7 @@ class NoteReminderButton extends StatelessWidget {
       });
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Reminder cleared')),
+          SnackBar(content: Text(l10n.reminderCleared)),
         );
       }
       return;
@@ -196,8 +192,7 @@ class NoteReminderButton extends StatelessWidget {
     if (selectedRepeat == 'none' && !scheduledAt.isAfter(DateTime.now())) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Please choose a future date and time')),
+          SnackBar(content: Text(l10n.pleaseChooseFutureDateTime)),
         );
       }
       return;
@@ -216,11 +211,7 @@ class NoteReminderButton extends StatelessWidget {
     if (!scheduled) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Could not schedule reminder. Allow notifications and alarms in phone settings.',
-            ),
-          ),
+          SnackBar(content: Text(l10n.couldNotScheduleReminder)),
         );
       }
       return;
@@ -234,9 +225,13 @@ class NoteReminderButton extends StatelessWidget {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Reminder set: ${formatReminderLabel(Timestamp.fromDate(scheduledAt), selectedRepeat)}',
-          ),
+          content: Text(l10n.reminderSet(
+            formatReminderLabel(
+              l10n,
+              Timestamp.fromDate(scheduledAt),
+              selectedRepeat,
+            ),
+          )),
         ),
       );
     }
@@ -244,6 +239,7 @@ class NoteReminderButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final hasReminder = reminderAt != null;
 
     return IconButton(
@@ -251,7 +247,7 @@ class NoteReminderButton extends StatelessWidget {
         hasReminder ? Icons.alarm_on : Icons.alarm,
         color: hasReminder ? Colors.orange : Colors.indigo,
       ),
-      tooltip: hasReminder ? 'Edit reminder' : 'Set reminder',
+      tooltip: hasReminder ? l10n.editReminder : l10n.setReminderAction,
       onPressed: () => _showReminderDialog(context),
     );
   }

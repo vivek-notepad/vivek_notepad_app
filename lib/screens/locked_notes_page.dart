@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:simple_notepad/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import '../services/secure_storage_service.dart';
 import '../services/reminder_service.dart';
 import '../services/speech_service.dart';
 import '../utils/note_search_utils.dart';
+import '../utils/reminder_formatter.dart';
+import '../utils/security_questions.dart';
 import '../widgets/note_reminder_button.dart';
 import '../widgets/note_search_bar.dart';
 import '../widgets/voice_input_button.dart';
@@ -48,39 +51,35 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
   }
 
   void _showPasswordSetupDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final TextEditingController passwordController = TextEditingController();
     String? selectedQuestion;
     final TextEditingController answerController = TextEditingController();
-    final List<String> securityQuestions = [
-      "What is your date of birth?",
-      "What is your favorite food?",
-      "Which is your favorite place?"
-    ];
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Set Up Password'),
+        title: Text(l10n.setUpPassword),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: passwordController,
               obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Set Password',
+              decoration: InputDecoration(
+                labelText: l10n.setPassword,
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 10),
             DropdownButtonFormField<String>(
               value: selectedQuestion,
-              hint: const Text('Select security question'),
-              items: securityQuestions.map((question) {
+              hint: Text(l10n.selectSecurityQuestion),
+              items: SecurityQuestions.keys.map((question) {
                 return DropdownMenuItem(
                   value: question,
-                  child: Text(question),
+                  child: Text(SecurityQuestions.label(l10n, question)),
                 );
               }).toList(),
               onChanged: (value) {
@@ -92,8 +91,8 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
             const SizedBox(height: 10),
             TextField(
               controller: answerController,
-              decoration: const InputDecoration(
-                labelText: 'Answer',
+              decoration: InputDecoration(
+                labelText: l10n.answer,
                 border: OutlineInputBorder(),
               ),
             ),
@@ -105,13 +104,13 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
               Navigator.pop(context);
               Navigator.pop(context); // Return to Home page
             },
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
               if (passwordController.text.isEmpty || selectedQuestion == null || answerController.text.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please fill all fields')),
+                  SnackBar(content: Text(l10n.pleaseFillAllFields)),
                 );
                 return;
               }
@@ -122,10 +121,10 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
               });
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Password and security question set')),
+                SnackBar(content: Text(l10n.passwordSecuritySet)),
               );
             },
-            child: const Text('Save'),
+            child: Text(l10n.save),
           ),
         ],
       ),
@@ -133,17 +132,18 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
   }
 
   void _showPasswordVerificationDialog() {
+    final l10n = AppLocalizations.of(context)!;
     _passwordController.clear();
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Enter Password'),
+        title: Text(l10n.enterPassword),
         content: TextField(
           controller: _passwordController,
           obscureText: true,
-          decoration: const InputDecoration(
-            labelText: 'Password',
+          decoration: InputDecoration(
+            labelText: l10n.password,
             border: OutlineInputBorder(),
           ),
         ),
@@ -153,7 +153,7 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
               Navigator.pop(context);
               Navigator.pop(context); // Return to Home page
             },
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -165,15 +165,15 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
                 Navigator.pop(context);
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Incorrect password')),
+                  SnackBar(content: Text(l10n.incorrectPassword)),
                 );
               }
             },
-            child: const Text('Submit'),
+            child: Text(l10n.submit),
           ),
           TextButton(
             onPressed: () => _showForgotPasswordDialog(),
-            child: const Text('Forgot Password'),
+            child: Text(l10n.forgotPassword),
           ),
         ],
       ),
@@ -181,6 +181,7 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
   }
 
   void _showForgotPasswordDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final TextEditingController answerController = TextEditingController();
     showDialog(
       context: context,
@@ -193,27 +194,27 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
           final question = snapshot.data;
           if (question == null) {
             return AlertDialog(
-              title: const Text('Error'),
-              content: const Text('Security question not set'),
+              title: Text(l10n.error),
+              content: Text(l10n.securityQuestionNotSet),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('OK'),
+                  child: Text(l10n.ok),
                 ),
               ],
             );
           }
           return AlertDialog(
-            title: const Text('Security Question'),
+            title: Text(l10n.securityQuestion),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(question),
+                Text(SecurityQuestions.displayLabel(l10n, question)),
                 const SizedBox(height: 10),
                 TextField(
                   controller: answerController,
-                  decoration: const InputDecoration(
-                    labelText: 'Answer',
+                  decoration: InputDecoration(
+                    labelText: l10n.answer,
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -222,7 +223,7 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: Text(l10n.cancel),
               ),
               TextButton(
                 onPressed: () async {
@@ -232,11 +233,11 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
                     _showResetPasswordDialog();
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Incorrect answer')),
+                      SnackBar(content: Text(l10n.incorrectAnswer)),
                     );
                   }
                 },
-                child: const Text('Verify'),
+                child: Text(l10n.verify),
               ),
             ],
           );
@@ -246,29 +247,30 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
   }
 
   void _showResetPasswordDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final TextEditingController newPasswordController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Reset Password'),
+        title: Text(l10n.resetPassword),
         content: TextField(
           controller: newPasswordController,
           obscureText: true,
-          decoration: const InputDecoration(
-            labelText: 'New Password',
+          decoration: InputDecoration(
+            labelText: l10n.newPassword,
             border: OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
               if (newPasswordController.text.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a new password')),
+                  SnackBar(content: Text(l10n.pleaseEnterNewPassword)),
                 );
                 return;
               }
@@ -279,10 +281,10 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
               Navigator.pop(context);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Password reset successfully')),
+                SnackBar(content: Text(l10n.passwordResetSuccess)),
               );
             },
-            child: const Text('Reset'),
+            child: Text(l10n.resetPassword),
           ),
         ],
       ),
@@ -290,6 +292,7 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
   }
 
   void _addOrUpdateNote() async {
+  final l10n = AppLocalizations.of(context)!;
   final title = _titleController.text.trim();
   final content = _contentController.text.trim();
 
@@ -314,7 +317,7 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
 
   // ✅ Show SnackBar message
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(wasEditing ? 'Note updated' : 'Note added')),
+    SnackBar(content: Text(wasEditing ? l10n.noteUpdated : l10n.noteAdded)),
   );
 
   await SpeechService.instance.stopAny();
@@ -326,15 +329,16 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
 
 
   void _confirmDeleteNote(String docId) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Note'),
-        content: const Text('Are you sure you want to delete this note?'),
+        title: Text(l10n.deleteNote),
+        content: Text(l10n.deleteNoteConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -349,7 +353,7 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
                 setState(() {});
               }
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -371,14 +375,15 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
     setState(() {});
   }
 
-  String _formatTimestamp(Timestamp? timestamp) {
+  String _formatTimestamp(Timestamp? timestamp, String localeName) {
     if (timestamp == null) return '';
     final date = timestamp.toDate();
-    return DateFormat.yMMMd().add_jm().format(date);
+    return DateFormat.yMMMd(localeName).add_jm().format(date);
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (!_isAuthenticated) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -388,13 +393,13 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: const Text('Locked Notes', style: TextStyle(color: Colors.indigo)),
+        title: Text(l10n.lockedNotes, style: const TextStyle(color: Colors.indigo)),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
           child: NoteSearchBar(
             controller: _searchController,
             onChanged: (_) => setState(() {}),
-            hintText: 'Search locked notes',
+            hintText: l10n.searchLockedNotes,
           ),
         ),
       ),
@@ -406,7 +411,7 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
               TextField(
                 controller: _titleController,
                 decoration: InputDecoration(
-                  labelText: 'Title',
+                  labelText: l10n.title,
                   border: const OutlineInputBorder(),
                   suffixIcon: VoiceInputButton(controller: _titleController),
                 ),
@@ -417,7 +422,7 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
                 minLines: 3,
                 maxLines: null,
                 decoration: InputDecoration(
-                  labelText: 'Content',
+                  labelText: l10n.content,
                   border: const OutlineInputBorder(),
                   alignLabelWithHint: true,
                   suffixIcon: VoiceInputButton(controller: _contentController),
@@ -433,13 +438,13 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
                       backgroundColor: Colors.indigo,
                       foregroundColor: Colors.white,
                     ),
-                    child: Text(editingNoteId == null ? 'Add Note' : 'Update Note'),
+                    child: Text(editingNoteId == null ? l10n.addNote : l10n.updateNote),
                   ),
                   if (editingNoteId != null) ...[
                     const SizedBox(width: 10),
                     TextButton(
                       onPressed: _cancelEditing,
-                      child: const Text('Cancel'),
+                      child: Text(l10n.cancel),
                     ),
                   ],
                 ],
@@ -462,12 +467,11 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
                   }).toList();
 
                   if (notes.isEmpty) {
-                    return const Center(child: Text("No locked notes yet."));
+                    return Center(child: Text(l10n.noLockedNotesYet));
                   }
 
                   if (filteredNotes.isEmpty) {
-                    return const Center(
-                        child: Text('No locked notes match your search.'));
+                    return Center(child: Text(l10n.noLockedNotesMatchSearch));
                   }
 
                   return ListView.builder(
@@ -480,7 +484,8 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
                       final title = data['title'] ?? '';
                       final content = data['content'] ?? '';
                       final isCompleted = data['isCompleted'] ?? false;
-                      final createdAt = _formatTimestamp(data['createdAt']);
+                      final createdAt =
+                          _formatTimestamp(data['createdAt'], l10n.localeName);
                       final reminderAt = data['reminderAt'] as Timestamp?;
                       final reminderRepeat =
                           data['reminderRepeat'] as String?;
@@ -526,7 +531,13 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
                               const SizedBox(height: 6),
                               if (reminderAt != null)
                                 Text(
-                                  'Reminder: ${NoteReminderButton.formatReminderLabel(reminderAt, reminderRepeat)}',
+                                  l10n.reminderLabel(
+                                    ReminderFormatter.formatReminderLabel(
+                                      l10n,
+                                      reminderAt,
+                                      reminderRepeat,
+                                    ),
+                                  ),
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: Colors.orange,

@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import '../widgets/note_reminder_button.dart';
+import 'package:simple_notepad/l10n/app_localizations.dart';
+import 'reminder_formatter.dart';
 
 class ReminderDialogResult {
   final bool cleared;
@@ -19,8 +19,9 @@ Future<ReminderDialogResult?> showReminderDialog(
   BuildContext context, {
   Timestamp? reminderAt,
   String? reminderRepeat,
-  String dialogTitle = 'Set Reminder',
+  required String dialogTitle,
 }) async {
+  final l10n = AppLocalizations.of(context)!;
   DateTime selectedDate = reminderAt?.toDate() ?? DateTime.now();
   TimeOfDay selectedTime = reminderAt != null
       ? TimeOfDay.fromDateTime(reminderAt.toDate())
@@ -33,8 +34,14 @@ Future<ReminderDialogResult?> showReminderDialog(
       return StatefulBuilder(
         builder: (context, setDialogState) {
           final reminderLabel = selectedRepeat == 'none'
-              ? '${DateFormat.yMMMd().format(selectedDate)} at ${selectedTime.format(context)}'
-              : NoteReminderButton.formatReminderLabel(
+              ? ReminderFormatter.onceLabel(
+                  l10n,
+                  selectedDate,
+                  selectedTime,
+                  context,
+                )
+              : ReminderFormatter.formatReminderLabel(
+                  l10n,
                   Timestamp.fromDate(DateTime(
                     selectedDate.year,
                     selectedDate.month,
@@ -62,15 +69,15 @@ Future<ReminderDialogResult?> showReminderDialog(
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     value: selectedRepeat,
-                    decoration: const InputDecoration(
-                      labelText: 'Repeat',
+                    decoration: InputDecoration(
+                      labelText: l10n.repeat,
                       border: OutlineInputBorder(),
                     ),
-                    items: const [
-                      DropdownMenuItem(value: 'none', child: Text('Once')),
-                      DropdownMenuItem(value: 'daily', child: Text('Daily')),
-                      DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
-                      DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
+                    items: [
+                      DropdownMenuItem(value: 'none', child: Text(l10n.once)),
+                      DropdownMenuItem(value: 'daily', child: Text(l10n.daily)),
+                      DropdownMenuItem(value: 'weekly', child: Text(l10n.weekly)),
+                      DropdownMenuItem(value: 'monthly', child: Text(l10n.monthly)),
                     ],
                     onChanged: (value) {
                       if (value != null) {
@@ -97,7 +104,9 @@ Future<ReminderDialogResult?> showReminderDialog(
                           },
                           icon: const Icon(Icons.calendar_today, size: 18),
                           label: Text(
-                            selectedRepeat == 'none' ? 'Date' : 'Start date',
+                            selectedRepeat == 'none'
+                                ? l10n.date
+                                : l10n.startDate,
                           ),
                         ),
                       ),
@@ -114,7 +123,7 @@ Future<ReminderDialogResult?> showReminderDialog(
                             }
                           },
                           icon: const Icon(Icons.access_time, size: 18),
-                          label: const Text('Time'),
+                          label: Text(l10n.time),
                         ),
                       ),
                     ],
@@ -126,18 +135,18 @@ Future<ReminderDialogResult?> showReminderDialog(
               if (reminderAt != null)
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext, 'clear'),
-                  child: const Text(
-                    'Clear',
+                  child: Text(
+                    l10n.clear,
                     style: TextStyle(color: Colors.red),
                   ),
                 ),
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cancel'),
+                child: Text(l10n.cancel),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext, 'set'),
-                child: const Text('Set Reminder'),
+                child: Text(l10n.setReminder),
               ),
             ],
           );
@@ -162,7 +171,7 @@ Future<ReminderDialogResult?> showReminderDialog(
   if (selectedRepeat == 'none' && !scheduledAt.isAfter(DateTime.now())) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please choose a future date and time')),
+        SnackBar(content: Text(l10n.pleaseChooseFutureDateTime)),
       );
     }
     return null;

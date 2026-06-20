@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:simple_notepad/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../data/our_apps.dart';
 import '../models/our_app.dart';
@@ -7,6 +8,7 @@ class OurAppsPage extends StatelessWidget {
   const OurAppsPage({super.key});
 
   Future<void> _openPlayStore(BuildContext context, OurApp app) async {
+    final l10n = AppLocalizations.of(context)!;
     final marketUri = Uri.parse('market://details?id=${app.packageId}');
     final webUri = Uri.parse(app.playStoreUrl);
 
@@ -22,7 +24,7 @@ class OurAppsPage extends StatelessWidget {
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open Google Play Store')),
+        SnackBar(content: Text(l10n.couldNotOpenPlayStore)),
       );
     }
   }
@@ -74,18 +76,19 @@ class OurAppsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Our New Apps', style: TextStyle(color: Colors.indigo)),
+        title: Text(l10n.ourNewApps, style: const TextStyle(color: Colors.indigo)),
       ),
       body: ourApps.isEmpty
-          ? const Center(
+          ? Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
                 child: Text(
-                  'More apps coming soon.\nCheck back later!',
+                  l10n.moreAppsComingSoon,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
                 ),
               ),
             )
@@ -134,7 +137,7 @@ class OurAppsPage extends StatelessWidget {
                             backgroundColor: Colors.indigo,
                             foregroundColor: Colors.white,
                           ),
-                          child: const Text('Install'),
+                          child: Text(l10n.install),
                         ),
                       ],
                     ),

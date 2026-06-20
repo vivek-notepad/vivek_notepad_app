@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:simple_notepad/l10n/app_localizations.dart';
 import '../services/speech_service.dart';
 
 class VoiceInputButton extends StatefulWidget {
@@ -25,6 +26,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
   }
 
   Future<void> _toggle() async {
+    final l10n = AppLocalizations.of(context)!;
     final started = await SpeechService.instance.toggleListening(
       widget.controller,
       onListeningChanged: (listening) {
@@ -39,7 +41,13 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
     if (!started && !SpeechService.instance.isListeningTo(widget.controller)) {
       final reason = SpeechService.instance.lastFailure;
       if (reason != SpeechFailureReason.none) {
-        final message = SpeechService.instance.failureMessage(reason);
+        final message = switch (reason) {
+          SpeechFailureReason.permissionDenied => l10n.micPermissionRequired,
+          SpeechFailureReason.permissionPermanentlyDenied =>
+            l10n.micPermissionDeniedSettings,
+          SpeechFailureReason.notAvailable => l10n.voiceInputNotAvailable,
+          SpeechFailureReason.none => '',
+        };
         if (message.isNotEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(message)),
@@ -51,12 +59,13 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return IconButton(
       icon: Icon(
         _listening ? Icons.mic : Icons.mic_none,
         color: _listening ? Colors.red : Colors.grey.shade700,
       ),
-      tooltip: _listening ? 'Stop voice input' : 'Voice input',
+      tooltip: _listening ? l10n.stopVoiceInput : l10n.voiceInput,
       onPressed: _toggle,
     );
   }

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:simple_notepad/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import '../services/reminder_service.dart';
 import '../services/speech_service.dart';
 import '../services/widget_service.dart';
 import '../utils/reminder_dialog.dart';
-import '../widgets/note_reminder_button.dart';
+import '../utils/reminder_formatter.dart';
 import '../widgets/voice_input_button.dart';
 
 class BatchNotesPage extends StatefulWidget {
@@ -102,12 +103,13 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
   }
 
   Future<void> _handleTaskReminder(BuildContext context, int taskIndex) async {
+    final l10n = AppLocalizations.of(context)!;
     final task = _tasks[taskIndex];
     final result = await showReminderDialog(
       context,
       reminderAt: _taskReminderAt(task),
       reminderRepeat: _taskReminderRepeat(task),
-      dialogTitle: 'Task Reminder',
+      dialogTitle: l10n.taskReminder,
     );
     if (result == null || !context.mounted) return;
 
@@ -131,8 +133,8 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
         SnackBar(
           content: Text(
             result.cleared
-                ? 'Task reminder cleared. Save note to keep changes.'
-                : 'Task reminder set. Save note to activate it.',
+                ? l10n.taskReminderClearedSave
+                : l10n.taskReminderSetSave,
           ),
         ),
       );
@@ -152,7 +154,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Could not save task reminder: $e'),
+          content: Text(l10n.couldNotSaveTaskReminder('$e')),
           backgroundColor: Colors.red,
         ),
       );
@@ -162,13 +164,19 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
     if (!context.mounted) return;
     if (result.cleared) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Task reminder cleared')),
+        SnackBar(content: Text(l10n.taskReminderCleared)),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Task reminder set: ${NoteReminderButton.formatReminderLabel(Timestamp.fromDate(result.scheduledAt!), result.repeat)}',
+            l10n.taskReminderSet(
+              ReminderFormatter.formatReminderLabel(
+                l10n,
+                Timestamp.fromDate(result.scheduledAt!),
+                result.repeat,
+              ),
+            ),
           ),
         ),
       );
@@ -182,6 +190,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
     List<dynamic> tasks,
     int taskIndex,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     final mutableTasks = tasks
         .map((t) => Map<String, dynamic>.from(t as Map<String, dynamic>))
         .toList();
@@ -190,7 +199,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
       context,
       reminderAt: _taskReminderAt(task),
       reminderRepeat: _taskReminderRepeat(task),
-      dialogTitle: 'Task Reminder',
+      dialogTitle: l10n.taskReminder,
     );
     if (result == null || !context.mounted) return;
 
@@ -214,7 +223,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Could not save task reminder: $e'),
+          content: Text(l10n.couldNotSaveTaskReminder('$e')),
           backgroundColor: Colors.red,
         ),
       );
@@ -224,13 +233,19 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
     if (!context.mounted) return;
     if (result.cleared) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Task reminder cleared')),
+        SnackBar(content: Text(l10n.taskReminderCleared)),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Task reminder set: ${NoteReminderButton.formatReminderLabel(Timestamp.fromDate(result.scheduledAt!), result.repeat)}',
+            l10n.taskReminderSet(
+              ReminderFormatter.formatReminderLabel(
+                l10n,
+                Timestamp.fromDate(result.scheduledAt!),
+                result.repeat,
+              ),
+            ),
           ),
         ),
       );
@@ -243,6 +258,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
     required Map<String, dynamic> task,
     double size = 20,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     final reminderAt = _taskReminderAt(task);
     return IconButton(
       icon: Icon(
@@ -252,7 +268,8 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
       ),
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-      tooltip: reminderAt != null ? 'Edit task reminder' : 'Set task reminder',
+      tooltip:
+          reminderAt != null ? l10n.editTaskReminder : l10n.setTaskReminder,
       onPressed: () => _handleTaskReminder(context, taskIndex),
     );
   }
@@ -266,6 +283,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
     required Map<String, dynamic> task,
     double size = 18,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     final reminderAt = _taskReminderAt(task);
     return IconButton(
       icon: Icon(
@@ -275,7 +293,8 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
       ),
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-      tooltip: reminderAt != null ? 'Edit task reminder' : 'Set task reminder',
+      tooltip:
+          reminderAt != null ? l10n.editTaskReminder : l10n.setTaskReminder,
       onPressed: () => _handleSavedTaskReminder(
         context,
         noteId,
@@ -348,6 +367,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
   }
 
   void _saveBatchNote() async {
+    final l10n = AppLocalizations.of(context)!;
     // Close any open keyboards
     FocusScope.of(context).unfocus();
     
@@ -404,7 +424,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(wasEditing ? 'Note updated' : 'Note added'),
+          content: Text(wasEditing ? l10n.noteUpdated : l10n.noteAdded),
           backgroundColor: Colors.black,
         ),
       );
@@ -421,7 +441,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: ${e.toString()}'),
+          content: Text(l10n.errorMessage(e.toString())),
           backgroundColor: Colors.red,
         ),
       );
@@ -429,14 +449,15 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
   }
 
   Future<void> _deleteNote(String docId) async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       await ReminderService.instance.cancelReminder(docId);
       await ReminderService.instance.cancelAllBatchTaskReminders(docId);
       await notesCollection.doc(docId).delete();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Note deleted'),
+        SnackBar(
+          content: Text(l10n.noteDeleted),
           backgroundColor: Colors.black,
         ),
       );
@@ -445,7 +466,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error deleting note: ${e.toString()}'),
+          content: Text(l10n.errorDeletingNote(e.toString())),
           backgroundColor: Colors.red,
         ),
       );
@@ -495,10 +516,10 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
     });
   }
 
-  String _formatTimestamp(Timestamp? timestamp) {
+  String _formatTimestamp(Timestamp? timestamp, String localeName) {
     if (timestamp == null) return '';
     final date = timestamp.toDate();
-    return DateFormat.yMMMd().add_jm().format(date);
+    return DateFormat.yMMMd(localeName).add_jm().format(date);
   }
 
   String _formatTimeOfDay(TimeOfDay? time) {
@@ -509,22 +530,23 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
   }
 
   void _confirmDeleteNote(String docId) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Note'),
-        content: const Text('Are you sure you want to delete this note?'),
+        title: Text(l10n.deleteNote),
+        content: Text(l10n.deleteNoteConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
               await _deleteNote(docId);
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -533,10 +555,11 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: const Text('Batch Notes', style: TextStyle(color: Colors.indigo)),
+        title: Text(l10n.batchNotes, style: const TextStyle(color: Colors.indigo)),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -547,7 +570,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
               TextField(
                 controller: _titleController,
                 decoration: InputDecoration(
-                  labelText: 'Title',
+                  labelText: l10n.title,
                   border: const OutlineInputBorder(),
                   suffixIcon: VoiceInputButton(controller: _titleController),
                 ),
@@ -571,8 +594,8 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                             controller: _taskController,
                             decoration: InputDecoration(
                               labelText: _editingTaskIndex != null
-                                  ? 'Edit task'
-                                  : 'Add a task',
+                                  ? l10n.editTask
+                                  : l10n.addTask,
                               border: InputBorder.none,
                               contentPadding:
                                   const EdgeInsets.symmetric(horizontal: 8),
@@ -712,7 +735,13 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                                       child: Align(
                                         alignment: Alignment.centerLeft,
                                         child: Text(
-                                          'Reminder: ${NoteReminderButton.formatReminderLabel(_taskReminderAt(task), _taskReminderRepeat(task))}',
+                                          l10n.reminderLabel(
+                                            ReminderFormatter.formatReminderLabel(
+                                              l10n,
+                                              _taskReminderAt(task),
+                                              _taskReminderRepeat(task),
+                                            ),
+                                          ),
                                           style: const TextStyle(
                                             fontSize: 11,
                                             color: Colors.orange,
@@ -736,8 +765,8 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                                             ),
                                             child: Text(
                                               time != null 
-                                                  ? 'Change Time (${_formatTimeOfDay(time)})' 
-                                                  : 'Set Time',
+                                                  ? '${l10n.time} (${_formatTimeOfDay(time)})'
+                                                  : l10n.time,
                                               style: const TextStyle(fontSize: 12),
                                             ),
                                           ),
@@ -776,13 +805,15 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                       backgroundColor: Colors.indigo,
                       foregroundColor: Colors.white,
                     ),
-                    child: Text(editingNoteId == null ? 'Save Batch Note' : 'Update Note'),
+                    child: Text(
+                      editingNoteId == null ? l10n.saveBatchNote : l10n.updateNote,
+                    ),
                   ),
                   if (editingNoteId != null) ...[
                     const SizedBox(width: 10),
                     TextButton(
                       onPressed: _cancelEditing,
-                      child: const Text('Cancel'),
+                      child: Text(l10n.cancel),
                     ),
                   ],
                 ],
@@ -803,8 +834,8 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                   final notes = snapshot.data!.docs;
 
                   if (notes.isEmpty) {
-                    return const Center(
-                      child: Text("No batch notes yet.", style: TextStyle(fontSize: 16)),
+                    return Center(
+                      child: Text(l10n.noBatchNotesYet, style: const TextStyle(fontSize: 16)),
                     );
                   }
 
@@ -817,7 +848,8 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                       final data = doc.data() as Map<String, dynamic>;
                       final title = data['title'] ?? '';
                       final tasks = data['tasks'] as List<dynamic>? ?? [];
-                      final createdAt = _formatTimestamp(data['createdAt']);
+                      final createdAt =
+                          _formatTimestamp(data['createdAt'], l10n.localeName);
                       final noteTitle = title;
 
                       return Card(
@@ -918,7 +950,13 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                                             Padding(
                                               padding: const EdgeInsets.only(left: 24, bottom: 2),
                                               child: Text(
-                                                'Reminder: ${NoteReminderButton.formatReminderLabel(taskReminderAt, _taskReminderRepeat(task))}',
+                                                l10n.reminderLabel(
+                                                  ReminderFormatter.formatReminderLabel(
+                                                    l10n,
+                                                    taskReminderAt,
+                                                    _taskReminderRepeat(task),
+                                                  ),
+                                                ),
                                                 style: const TextStyle(
                                                   fontSize: 11,
                                                   color: Colors.orange,
@@ -933,7 +971,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                                       Padding(
                                         padding: const EdgeInsets.only(top: 4),
                                         child: Text(
-                                          '+ ${tasks.length - 3} more tasks',
+                                          l10n.moreTasks(tasks.length - 3),
                                           style: const TextStyle(fontStyle: FontStyle.italic),
                                         ),
                                       ),

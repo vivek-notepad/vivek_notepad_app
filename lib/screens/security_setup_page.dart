@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:simple_notepad/l10n/app_localizations.dart';
 import '../services/secure_storage_service.dart';
+import '../utils/security_questions.dart';
 
 class SecuritySetupPage extends StatefulWidget {
   const SecuritySetupPage({super.key});
@@ -12,55 +14,51 @@ class _SecuritySetupPageState extends State<SecuritySetupPage> {
   final SecureStorageService _secureStorage = SecureStorageService();
   final TextEditingController _answerController = TextEditingController();
   String? _selectedQuestion;
-  final List<String> _securityQuestions = [
-    "What is your date of birth?",
-    "What is your favorite food?",
-    "Which is your favorite place?"
-  ];
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Security Setup'),
+        title: Text(l10n.securitySetup),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Set up security question',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              l10n.setUpSecurityQuestion,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-            const Text('Select a security question:'),
+            Text(l10n.selectSecurityQuestionPrompt),
             DropdownButtonFormField<String>(
               value: _selectedQuestion,
-              hint: const Text('Select security question'),
-              items: _securityQuestions.map((question) {
+              hint: Text(l10n.selectSecurityQuestion),
+              items: SecurityQuestions.keys.map((question) {
                 return DropdownMenuItem(
                   value: question,
-                  child: Text(question),
+                  child: Text(SecurityQuestions.label(l10n, question)),
                 );
               }).toList(),
               onChanged: (value) => setState(() => _selectedQuestion = value),
             ),
             const SizedBox(height: 20),
             if (_selectedQuestion != null) ...[
-              Text(_selectedQuestion!),
+              Text(SecurityQuestions.label(l10n, _selectedQuestion!)),
               const SizedBox(height: 10),
               TextField(
                 controller: _answerController,
-                decoration: const InputDecoration(
-                  labelText: 'Answer',
+                decoration: InputDecoration(
+                  labelText: l10n.answer,
                   border: OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _saveSecuritySetup,
-                child: const Text('Save Security Setup'),
+                child: Text(l10n.saveSecuritySetup),
               ),
             ],
           ],
@@ -70,9 +68,10 @@ class _SecuritySetupPageState extends State<SecuritySetupPage> {
   }
 
   Future<void> _saveSecuritySetup() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_selectedQuestion == null || _answerController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a question and provide an answer')),
+        SnackBar(content: Text(l10n.pleaseSelectQuestionAndAnswer)),
       );
       return;
     }
@@ -80,7 +79,7 @@ class _SecuritySetupPageState extends State<SecuritySetupPage> {
     await _secureStorage.setSecurityQuestion(_selectedQuestion!, _answerController.text);
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Security setup completed successfully')),
+      SnackBar(content: Text(l10n.securitySetupCompleted)),
     );
   }
 }
