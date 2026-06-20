@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import '../services/reminder_service.dart';
+import '../widgets/note_reminder_button.dart';
 
 class BatchNotesPage extends StatefulWidget {
   final VoidCallback resetBatchMode;
@@ -197,6 +199,7 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
 
   Future<void> _deleteNote(String docId) async {
     try {
+      await ReminderService.instance.cancelReminder(docId);
       await notesCollection.doc(docId).delete();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -553,6 +556,13 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                       final title = data['title'] ?? '';
                       final tasks = data['tasks'] as List<dynamic>? ?? [];
                       final createdAt = _formatTimestamp(data['createdAt']);
+                      final reminderAt = data['reminderAt'] as Timestamp?;
+                      final noteContent = tasks.isNotEmpty
+                          ? tasks
+                              .map((task) => task['text']?.toString() ?? '')
+                              .where((text) => text.isNotEmpty)
+                              .join('\n')
+                          : '';
 
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 6),
@@ -642,19 +652,54 @@ class _BatchNotesPageState extends State<BatchNotesPage> {
                                         ),
                                       ),
                                     const SizedBox(height: 6),
+                                    if (reminderAt != null)
+                                      Text(
+                                        'Reminder: ${NoteReminderButton.formatReminder(reminderAt)}',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.orange,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
                                     Text(
                                       createdAt,
                                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                                     ),
                                   ],
                                 )
-                              : Text(
-                                  createdAt,
-                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (reminderAt != null)
+                                      Text(
+                                        'Reminder: ${NoteReminderButton.formatReminder(reminderAt)}',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.orange,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    Text(
+                                      createdAt,
+                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                    ),
+                                  ],
                                 ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _confirmDeleteNote(doc.id),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              NoteReminderButton(
+                                notesCollection: notesCollection,
+                                noteId: doc.id,
+                                noteTitle: title,
+                                noteContent: noteContent,
+                                reminderAt: reminderAt,
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => _confirmDeleteNote(doc.id),
+                              ),
+                            ],
                           ),
                           isThreeLine: tasks.isNotEmpty,
                         ),

@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../services/secure_storage_service.dart';
+import '../services/reminder_service.dart';
+import '../widgets/note_reminder_button.dart';
 
 class LockedNotesPage extends StatefulWidget {
   const LockedNotesPage({super.key});
@@ -332,6 +334,7 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
+              await ReminderService.instance.cancelReminder(docId);
               await notesCollection.doc(docId).delete();
               await _secureStorage.deleteNotePassword(docId);
               if (editingNoteId == docId) {
@@ -452,6 +455,7 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
                       final content = data['content'] ?? '';
                       final isCompleted = data['isCompleted'] ?? false;
                       final createdAt = _formatTimestamp(data['createdAt']);
+                      final reminderAt = data['reminderAt'] as Timestamp?;
 
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 6),
@@ -492,15 +496,36 @@ class _LockedNotesPageState extends State<LockedNotesPage> {
                                 ),
                               ),
                               const SizedBox(height: 6),
+                              if (reminderAt != null)
+                                Text(
+                                  'Reminder: ${NoteReminderButton.formatReminder(reminderAt)}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.orange,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               Text(
                                 createdAt,
                                 style: const TextStyle(fontSize: 12, color: Colors.grey),
                               ),
                             ],
                           ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _confirmDeleteNote(doc.id),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              NoteReminderButton(
+                                notesCollection: notesCollection,
+                                noteId: doc.id,
+                                noteTitle: title,
+                                noteContent: content,
+                                reminderAt: reminderAt,
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => _confirmDeleteNote(doc.id),
+                              ),
+                            ],
                           ),
                           isThreeLine: true,
                         ),

@@ -5,11 +5,17 @@ import 'screens/notes_home_page.dart';
 import 'screens/locked_notes_page.dart';
 import 'screens/security_setup_page.dart';
 import 'screens/our_apps_page.dart';
+import 'services/reminder_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await FirebaseAuth.instance.signInAnonymously();
+  await ReminderService.instance.init();
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+  if (userId != null) {
+    await ReminderService.instance.syncRemindersFromFirestore(userId);
+  }
   runApp(const NotepadApp());
 }
 
