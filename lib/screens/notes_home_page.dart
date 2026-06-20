@@ -53,6 +53,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
         final l10n = AppLocalizations.of(context)!;
         showDialog(
           context: context,
+          barrierDismissible: false,
           builder: (dialogContext) => AlertDialog(
             title: Text(info.title),
             content: Text(info.body),

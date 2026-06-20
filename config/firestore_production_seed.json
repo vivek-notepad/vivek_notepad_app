@@ -1,0 +1,19 @@
+# Copy this JSON into Firebase Console → Firestore → app_settings → production
+# Or run after: firebase login && firebase deploy --only firestore:rules
+#
+# Document path: app_settings/production
+# Fields (use number type for latestVersionCode):
+#
+# latestVersionCode: 12
+# latestVersionName: "2.1"
+# updateTitle: "New version available"
+# updateMessage: "Version 2.1 is on Google Play. Tap Update to install."
+# forceNotify: false
+
+{
+  "latestVersionCode": 12,
+  "latestVersionName": "2.1",
+  "updateTitle": "New version available",
+  "updateMessage": "Version 2.1 is on Google Play. Tap Update to install.",
+  "forceNotify": false
+}
