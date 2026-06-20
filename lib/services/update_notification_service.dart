@@ -12,6 +12,21 @@ const playStoreUrl =
     'https://play.google.com/store/apps/details?id=com.viveksingh.notepad_app';
 const updateTopic = 'app_updates';
 const productionSettingsPath = 'app_settings/production';
+const _lastNotifiedKey = 'last_notified_update_v2';
+
+class AppUpdateInfo {
+  final String title;
+  final String body;
+  final int latestVersionCode;
+
+  const AppUpdateInfo({
+    required this.title,
+    required this.body,
+    required this.latestVersionCode,
+  });
+}
+
+typedef AppUpdatePromptCallback = void Function(AppUpdateInfo info);
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -43,7 +58,7 @@ class UpdateNotificationService {
 
   static void handleNotificationResponse(NotificationResponse response) {
     if (response.payload == 'app_update') {
-      instance._openPlayStore();
+      instance.openPlayStore();
     }
   }
 
@@ -56,7 +71,7 @@ class UpdateNotificationService {
     FirebaseMessaging.onMessage.listen(_showUpdateFromMessage);
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
       _showUpdateFromMessage(message);
-      _openPlayStore();
+      openPlayStore();
     });
 
     final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
@@ -64,50 +79,109 @@ class UpdateNotificationService {
       await _showUpdateFromMessage(initialMessage);
     }
 
-    await checkForProductionUpdate();
     _initialized = true;
   }
 
+  int _readVersionCode(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value.trim()) ?? 0;
+    return 0;
+  }
+
   /// Checks Firestore production config and notifies users on older versions.
-  Future<void> checkForProductionUpdate() async {
+  /// Call after the first frame so Android notification permission can be requested.
+  Future<void> checkForProductionUpdate({
+    AppUpdatePromptCallback? onInAppPrompt,
+  }) async {
     try {
       final packageInfo = await PackageInfo.fromPlatform();
-      final currentVersionCode = int.tryParse(packageInfo.buildNumber) ?? 0;
+      final currentVersionCode = _readVersionCode(packageInfo.buildNumber);
+
+      if (kDebugMode) {
+        debugPrint(
+          'Update check: installed versionCode=$currentVersionCode '
+          '(${packageInfo.version})',
+        );
+      }
 
       final doc = await FirebaseFirestore.instance
           .doc(productionSettingsPath)
-          .get();
-      if (!doc.exists) return;
+          .get(const GetOptions(source: Source.server));
+
+      if (!doc.exists) {
+        if (kDebugMode) {
+          debugPrint('Update check: $productionSettingsPath not found in Firestore');
+        }
+        return;
+      }
 
       final data = doc.data();
       if (data == null) return;
 
-      final latestVersionCode = data['latestVersionCode'] as int? ?? 0;
-      if (latestVersionCode <= currentVersionCode) return;
+      final latestVersionCode = _readVersionCode(data['latestVersionCode']);
+      if (kDebugMode) {
+        debugPrint('Update check: Firestore latestVersionCode=$latestVersionCode');
+      }
 
-      final lastNotified = await _storage.read(key: 'last_notified_update');
-      if (lastNotified == '$latestVersionCode') return;
+      if (latestVersionCode <= 0 || latestVersionCode <= currentVersionCode) {
+        return;
+      }
 
-      final title = data['updateTitle'] as String? ?? 'New version available';
+      final lastNotified = await _storage.read(key: _lastNotifiedKey);
+      if (lastNotified == '$latestVersionCode') {
+        return;
+      }
+
+      final title = data['updateTitle']?.toString() ?? 'New version available';
       final versionName =
-          data['latestVersionName'] as String? ?? packageInfo.version;
-      final body = data['updateMessage'] as String? ??
+          data['latestVersionName']?.toString() ?? packageInfo.version;
+      final body = data['updateMessage']?.toString() ??
           'Version $versionName is now on Google Play. Tap to update.';
 
-      await ReminderService.instance.showAppUpdateNotification(
+      final info = AppUpdateInfo(
+        title: title,
+        body: body,
+        latestVersionCode: latestVersionCode,
+      );
+
+      final notified = await ReminderService.instance.showAppUpdateNotification(
         title: title,
         body: body,
       );
-      await _storage.write(
-        key: 'last_notified_update',
-        value: '$latestVersionCode',
-      );
-    } catch (e) {
+
+      if (notified) {
+        await _markNotified(latestVersionCode);
+        return;
+      }
+
+      if (kDebugMode) {
+        debugPrint(
+          'Update check: notification not shown (permission denied or blocked). '
+          'Trying in-app prompt.',
+        );
+      }
+
+      if (onInAppPrompt != null) {
+        onInAppPrompt(info);
+        await _markNotified(latestVersionCode);
+      }
+    } catch (e, stack) {
       debugPrint('Production update check failed: $e');
+      if (kDebugMode) {
+        debugPrint('$stack');
+      }
     }
   }
 
-  Future<void> _openPlayStore() async {
+  Future<void> _markNotified(int latestVersionCode) async {
+    await _storage.write(
+      key: _lastNotifiedKey,
+      value: '$latestVersionCode',
+    );
+  }
+
+  Future<void> openPlayStore() async {
     final uri = Uri.parse(playStoreUrl);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);

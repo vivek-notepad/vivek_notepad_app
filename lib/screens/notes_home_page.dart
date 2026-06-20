@@ -9,6 +9,7 @@ import 'batch_notes_page.dart';
 import '../services/reminder_service.dart';
 import '../services/speech_service.dart';
 import '../services/widget_service.dart';
+import '../services/update_notification_service.dart';
 import '../utils/reminder_formatter.dart';
 import '../utils/note_search_utils.dart';
 import '../widgets/note_reminder_button.dart';
@@ -40,6 +41,38 @@ class _NotesHomePageState extends State<NotesHomePage> {
         .doc(userId)
         .collection('notes');
     _loadWidgetTip();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForAppUpdate();
+    });
+  }
+
+  Future<void> _checkForAppUpdate() async {
+    await UpdateNotificationService.instance.checkForProductionUpdate(
+      onInAppPrompt: (info) {
+        if (!mounted) return;
+        final l10n = AppLocalizations.of(context)!;
+        showDialog(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(info.title),
+            content: Text(info.body),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(l10n.cancel),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  UpdateNotificationService.instance.openPlayStore();
+                },
+                child: Text(l10n.install),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _loadWidgetTip() async {

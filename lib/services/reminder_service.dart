@@ -289,11 +289,15 @@ class ReminderService {
 
   static const int appUpdateNotificationId = 900001;
 
-  Future<void> showAppUpdateNotification({
+  Future<bool> showAppUpdateNotification({
     required String title,
     required String body,
   }) async {
-    await ensurePermissions();
+    await init();
+    final granted = await _androidPlugin?.requestNotificationsPermission();
+    if (granted == false) {
+      return false;
+    }
 
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
@@ -314,6 +318,7 @@ class ReminderService {
       details,
       payload: 'app_update',
     );
+    return true;
   }
 
   Future<void> syncRemindersFromFirestore(String userId) async {
