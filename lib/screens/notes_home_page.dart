@@ -179,6 +179,8 @@ class _NotesHomePageState extends State<NotesHomePage> {
             onSelected: (value) {
               if (value == 'locked-notes') {
                 Navigator.pushNamed(context, '/locked-notes');
+              } else if (value == 'our-apps') {
+                Navigator.pushNamed(context, '/our-apps');
               } else if (value == 'invite') {
                 _inviteFriends();
               } else if (value == 'feedback') {
@@ -193,6 +195,16 @@ class _NotesHomePageState extends State<NotesHomePage> {
                     Icon(Icons.lock),
                     SizedBox(width: 8),
                     Text('Locked Notes'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'our-apps',
+                child: Row(
+                  children: [
+                    Icon(Icons.apps),
+                    SizedBox(width: 8),
+                    Text('Our New Apps'),
                   ],
                 ),
               ),
