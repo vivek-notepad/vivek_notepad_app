@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -71,8 +72,14 @@ class UpdateNotificationService {
   Future<void> init() async {
     if (_initialized) return;
 
-    await FirebaseMessaging.instance.requestPermission();
-    await FirebaseMessaging.instance.subscribeToTopic(updateTopic);
+    try {
+      await FirebaseMessaging.instance.requestPermission();
+      await FirebaseMessaging.instance
+          .subscribeToTopic(updateTopic)
+          .timeout(const Duration(seconds: 8));
+    } catch (e) {
+      _log('FCM setup failed: $e');
+    }
 
     FirebaseMessaging.onMessage.listen(_showUpdateFromMessage);
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
@@ -80,9 +87,14 @@ class UpdateNotificationService {
       openPlayStore();
     });
 
-    final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
-    if (initialMessage != null) {
-      await _showUpdateFromMessage(initialMessage);
+    try {
+      final initialMessage =
+          await FirebaseMessaging.instance.getInitialMessage();
+      if (initialMessage != null) {
+        await _showUpdateFromMessage(initialMessage);
+      }
+    } catch (e) {
+      _log('Initial FCM message check failed: $e');
     }
 
     _initialized = true;

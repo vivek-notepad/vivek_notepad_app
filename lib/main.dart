@@ -1,7 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:simple_notepad/l10n/app_localizations.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'screens/notes_home_page.dart';
 import 'screens/locked_notes_page.dart';
@@ -9,6 +11,7 @@ import 'screens/security_setup_page.dart';
 import 'screens/our_apps_page.dart';
 import 'screens/widget_setup_page.dart';
 import 'screens/language_settings_page.dart';
+import 'services/auth_service.dart';
 import 'services/reminder_service.dart';
 import 'services/update_notification_service.dart';
 import 'services/widget_service.dart';
@@ -18,19 +21,40 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   await Firebase.initializeApp();
-  await FirebaseAuth.instance.signInAnonymously();
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+  );
   await LocaleService.instance.init();
   await WidgetService.instance.init();
   await ReminderService.instance.init(
     onNotificationTap: UpdateNotificationService.handleNotificationResponse,
   );
-  await UpdateNotificationService.instance.init();
-  final userId = FirebaseAuth.instance.currentUser?.uid;
-  if (userId != null) {
-    await ReminderService.instance.syncRemindersFromFirestore(userId);
-    await WidgetService.instance.syncFromFirestore(userId);
-  }
+  await AuthService.instance.ensureSignedIn();
   runApp(const NotepadApp());
+  unawaited(_bootstrapAfterLaunch());
+}
+
+Future<void> _bootstrapAfterLaunch() async {
+  try {
+    await UpdateNotificationService.instance.init();
+  } catch (e) {
+    debugPrint('Update notifications init failed: $e');
+  }
+
+  final userId = AuthService.instance.userId;
+  if (userId == null) return;
+
+  try {
+    await ReminderService.instance.syncRemindersFromFirestore(userId);
+  } catch (e) {
+    debugPrint('Reminder sync failed: $e');
+  }
+
+  try {
+    await WidgetService.instance.syncFromFirestore(userId);
+  } catch (e) {
+    debugPrint('Widget sync failed: $e');
+  }
 }
 
 class NotepadApp extends StatelessWidget {

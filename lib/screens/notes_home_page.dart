@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:simple_notepad/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'batch_notes_page.dart';
+import '../services/auth_service.dart';
 import '../services/reminder_service.dart';
 import '../services/speech_service.dart';
 import '../services/widget_service.dart';
@@ -27,8 +27,15 @@ class _NotesHomePageState extends State<NotesHomePage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
-  final String userId = FirebaseAuth.instance.currentUser!.uid;
-  late final CollectionReference notesCollection;
+  CollectionReference? get notesCollection {
+    final userId = AuthService.instance.userId;
+    if (userId == null) return null;
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('notes');
+  }
+
   String? editingNoteId;
   bool _isBatchMode = false;
   bool _showWidgetTip = false;
@@ -36,10 +43,6 @@ class _NotesHomePageState extends State<NotesHomePage> {
   @override
   void initState() {
     super.initState();
-    notesCollection = FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('notes');
     _loadWidgetTip();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkForAppUpdate();
@@ -108,6 +111,8 @@ class _NotesHomePageState extends State<NotesHomePage> {
 
   void _addOrUpdateNote() async {
     final l10n = AppLocalizations.of(context)!;
+    final collection = notesCollection;
+    if (collection == null) return;
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
 
@@ -116,12 +121,12 @@ class _NotesHomePageState extends State<NotesHomePage> {
     final wasEditing = editingNoteId != null;
 
     if (wasEditing) {
-      await notesCollection.doc(editingNoteId).update({
+      await collection.doc(editingNoteId).update({
         'title': title,
         'content': content,
       });
     } else {
-      await notesCollection.add({
+      await collection.add({
         'title': title,
         'content': content,
         'isLocked': false,
@@ -159,8 +164,10 @@ class _NotesHomePageState extends State<NotesHomePage> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
+              final collection = notesCollection;
+              if (collection == null) return;
               await ReminderService.instance.cancelReminder(docId);
-              await notesCollection.doc(docId).delete();
+              await collection.doc(docId).delete();
               if (editingNoteId == docId) {
                 _titleController.clear();
                 _contentController.clear();
@@ -265,6 +272,23 @@ class _NotesHomePageState extends State<NotesHomePage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final collection = notesCollection;
+    if (collection == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(l10n.appTitle, style: const TextStyle(color: Colors.indigo)),
+        ),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Connect to the internet once to sign in. After that, you can use the app offline.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
@@ -480,7 +504,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
               ),
               const SizedBox(height: 20),
               StreamBuilder<QuerySnapshot>(
-                stream: notesCollection
+                stream: collection
                     .where('isLocked', isEqualTo: false)
                     .orderBy('createdAt', descending: true)
                     .snapshots(),
@@ -534,7 +558,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
                           leading: Checkbox(
                             value: isCompleted,
                             onChanged: (value) =>
-                                notesCollection.doc(doc.id).update({
+                                collection.doc(doc.id).update({
                               'isCompleted': value ?? false,
                             }),
                           ),
@@ -593,7 +617,7 @@ class _NotesHomePageState extends State<NotesHomePage> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               NoteReminderButton(
-                                notesCollection: notesCollection,
+                                notesCollection: collection,
                                 noteId: doc.id,
                                 noteTitle: title,
                                 noteContent: content,
